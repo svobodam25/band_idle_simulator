@@ -8,7 +8,8 @@ class Lista():
         self.sirka = sirka
         self.vyska_okna = vyska  # Store window height
         self.vyska = 100
-        self.penize = 20000
+        self.penize = 0
+        self.prijem = 0  # 1$ per second
         self.font = pygame.font.SysFont(None, 60)
 
         self.menu_otevrene = False
@@ -22,6 +23,7 @@ class Lista():
         # Menu items
         self.menu_items = ["Položka 1", "Položka 2", "Položka 3", "Položka 4", "Položka 5", "Položka 6", "Položka 7", "Položka 8"]
         self.item_prices = {0: 10, 1: 25, 2: 50, 3: 100, 4: 200, 5: 500, 6: 1000, 7: 2500}  # Price for each item
+        self.bought_items = set()  # Track bought items
         self.item_height = 70
         self.item_spacing = 10
         self.scroll_offset = 0
@@ -104,8 +106,15 @@ class Lista():
             
             # Draw menu items
             menu_y = self.vyska + 5
-            for i, item in enumerate(self.menu_items):
-                item_y = menu_y + i * (self.item_height + self.item_spacing) - self.scroll_offset
+            visible_index = 0
+            for i in range(len(self.menu_items)):
+                # Skip bought items
+                if i in self.bought_items:
+                    continue
+                
+                item = self.menu_items[i]
+                item_y = menu_y + visible_index * (self.item_height + self.item_spacing) - self.scroll_offset
+                visible_index += 1
                 
                 if self.vyska < item_y + self.item_height < self.vyska + self.menu_vyska:
                     # Draw item background with rounded corners
@@ -172,8 +181,10 @@ class Lista():
         if self.menu_vyska < self.menu_max_vyska * 0.999:
             return
         
+        # Count visible items (not bought)
+        visible_items_count = len([i for i in range(len(self.menu_items)) if i not in self.bought_items])
         # Total content height = items height + spacing between items (not after last item)
-        total_content_height = len(self.menu_items) * self.item_height + max(0, (len(self.menu_items) - 1) * self.item_spacing)
+        total_content_height = visible_items_count * self.item_height + max(0, (visible_items_count - 1) * self.item_spacing)
         # Visible height is limited by window height
         visible_height = min(self.menu_vyska, self.vyska_okna - self.vyska)
         # Account for the 5px offset at the top
@@ -201,8 +212,10 @@ class Lista():
         if self.menu_vyska <= 0:
             return
         
+        # Count visible items (not bought)
+        visible_items_count = len([i for i in range(len(self.menu_items)) if i not in self.bought_items])
         # Total content height = items height + spacing between items (not after last item)
-        total_content_height = len(self.menu_items) * self.item_height + max(0, (len(self.menu_items) - 1) * self.item_spacing)
+        total_content_height = visible_items_count * self.item_height + max(0, (visible_items_count - 1) * self.item_spacing)
         # Visible height is limited by window height
         visible_height = min(self.menu_vyska, self.vyska_okna - self.vyska)
         # Account for the 5px offset at the top
