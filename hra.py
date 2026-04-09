@@ -21,14 +21,14 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:  # Only left mouse button
+            if event.button == 1:
                 if lista.settings_otevrene:
                     if hasattr(lista, 'btn_zavrit_nastaveni') and lista.btn_zavrit_nastaveni.collidepoint(event.pos):
                         lista.settings_otevrene = False
                     elif lista.btn_vol_minus.collidepoint(event.pos):
-                        lista.upravit_hlasitost(-0.1)  # Snížit hlasitost o 10 %
+                        lista.upravit_hlasitost(-0.1)
                     elif lista.btn_vol_plus.collidepoint(event.pos):
-                        lista.upravit_hlasitost(0.1)   # Zvýšit hlasitost o 10 %
+                        lista.upravit_hlasitost(0.1)
                     elif hasattr(lista, 'btn_res_change') and lista.btn_res_change.collidepoint(event.pos):
                         if width == 800:
                             width, height = 1920, 1080
@@ -41,28 +41,24 @@ while running:
                         running = False
                     continue
 
-                # Check if logo was clicked
                 if lista.logo_rect.collidepoint(event.pos):
                     lista.settings_otevrene = True
                     continue
 
-                # Check if singer was clicked
                 if lista.singer_rect.collidepoint(event.pos) or (lista.mikrofon_active and lista.mikrofon_rect.collidepoint(event.pos)):
                     lista.penize += lista.sila_kliku
-                    lista.singer_target_scale = 1.15  # Animate singer
-                # Check if menu button was clicked
+                    lista.kliknuti_historie.append((time.time(), lista.sila_kliku))
+                    lista.singer_target_scale = 1.15
                 elif lista.menu_rect.collidepoint(event.pos):
                     lista.menu_otevrene = not lista.menu_otevrene
                     lista.odrazu = 0
-                    lista.menu_rychlost = 0  # Restarts velocity for immediate stop/reverse
-                    if not lista.menu_otevrene:  # Reset scroll only when closing
+                    lista.menu_rychlost = 0
+                    if not lista.menu_otevrene:
                         lista.scroll_offset = 0
-                # Check for buy button clicks
                 elif lista.menu_vyska > 0:
                     menu_y = lista.vyska + 5
                     visible_index = 0
                     for i in range(len(lista.menu_items)):
-                        # Skip bought items
                         if i in lista.bought_items:
                             continue
                         
@@ -82,18 +78,15 @@ while running:
 
                                     lista.bought_items.add(i)
 
-                                    # If item 0 (Microphone) is purchased
                                     if i == 0:
                                         lista.mikrofon_active = True
-                                        lista.prijem += 1  # Mikrofon vydělává automaticky 1$ za vteřinu
-                                        lista.sila_kliku += 1 # A také přidává hodnotu pro ruční klikání
+                                        lista.prijem += 1
+                                        lista.sila_kliku += 1
                                     
-                                    # If item 1 (drummer) is purchased
                                     elif i == 1:
                                         lista.drummer_active = True
                                         lista.prijem += 2
                                     
-                                    # If item 2 (guitarist) is purchased
                                     elif i == 2:
                                         lista.guitarist_active = True
                                         lista.prijem += 3
@@ -118,18 +111,17 @@ while running:
 
     lista.update()
     
-    # Update income (every second)
     current_time = time.time()
     if current_time - last_income_update >= 1.0:
         lista.penize += lista.prijem
+        if lista.mikrofon_active:
+            lista.singer_target_scale = 1.15
         last_income_update = current_time
 
-    # Drummer hit frequency (e.g. every 2.5 seconds)
     if lista.drummer_active and current_time - last_drum_hit >= 2.5:
         lista.zahraj_na_buben()
         last_drum_hit = current_time
 
-    # Guitarist strum frequency (e.g. every 1.5 seconds)
     if lista.guitarist_active and current_time - last_guitar_strum >= 1.5:
         lista.zahraj_na_kytaru()
         last_guitar_strum = current_time
