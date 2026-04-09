@@ -58,11 +58,7 @@ while running:
                                     # If item 0 (drummer) is purchased
                                     if i == 0:
                                         lista.drummer_active = True
-
-
-                                    # If item 0 (drummer) is purchased
-                                    if i == 0:
-                                        lista.drummer_active = True
+                                        lista.prijem += 2
 
         if event.type == pygame.MOUSEWHEEL:
             if lista.menu_vyska > 0:
