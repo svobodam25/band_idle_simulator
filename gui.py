@@ -37,6 +37,12 @@ class Lista():
         self.button_width = 80
         self.button_font = pygame.font.SysFont(None, 30)
         self.button_text = self.button_font.render("Koupit", True, (255, 255, 255))
+        
+        # Singer properties
+        self.singer_x = sirka // 2
+        self.singer_y = 300
+        self.singer_image = pygame.image.load("obrazky/docasny_zpevak.png")
+        self.singer_rect = self.singer_image.get_rect(center=(self.singer_x, self.singer_y))
 
 
     def update(self): 
@@ -68,22 +74,11 @@ class Lista():
 
 
     def nakresli(self, okno):
-        pygame.draw.rect(okno, self.barva, (0, 0, self.sirka, self.vyska))
-
-        text = penize_font.render(f"{self.penize}$", True, (0, 0, 0))
-        text_rect = text.get_rect(center=(self.sirka // 2, self.vyska // 2))
-        okno.blit(text, text_rect)
-
-        line_color = (0, 0, 0)
-        line_width = 5
-
-        x_start = self.sirka - 80
-        x_end = self.sirka - 30
-
-        pygame.draw.line(okno, line_color, (x_start, 35), (x_end, 35), line_width)
-        pygame.draw.line(okno, line_color, (x_start, 50), (x_end, 50), line_width)
-        pygame.draw.line(okno, line_color, (x_start, 65), (x_end, 65), line_width)
-
+        # Draw singer in the middle (background)
+        self.singer_rect.center = (self.singer_x, self.singer_y)
+        okno.blit(self.singer_image, self.singer_rect)
+        
+        # Draw menu (above singer)
         if self.menu_vyska > 0:
             tmava_hneda = (90, 50, 20)
             pygame.draw.rect(okno, tmava_hneda, (0, self.vyska, self.sirka, self.menu_vyska))
@@ -115,6 +110,23 @@ class Lista():
             
             # Draw scrollbar
             self._draw_scrollbar(okno)
+        
+        # Draw header bar on top (always on top)
+        pygame.draw.rect(okno, self.barva, (0, 0, self.sirka, self.vyska))
+
+        text = penize_font.render(f"{self.penize}$", True, (0, 0, 0))
+        text_rect = text.get_rect(center=(self.sirka // 2, self.vyska // 2))
+        okno.blit(text, text_rect)
+
+        line_color = (0, 0, 0)
+        line_width = 5
+
+        x_start = self.sirka - 80
+        x_end = self.sirka - 30
+
+        pygame.draw.line(okno, line_color, (x_start, 35), (x_end, 35), line_width)
+        pygame.draw.line(okno, line_color, (x_start, 50), (x_end, 50), line_width)
+        pygame.draw.line(okno, line_color, (x_start, 65), (x_end, 65), line_width)
     
     def _draw_scrollbar(self, okno):
         """Draw scrollbar on the right side of the menu"""
