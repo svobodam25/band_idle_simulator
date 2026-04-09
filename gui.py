@@ -10,25 +10,34 @@ class Lista():
         self.penize = 0
         self.font = pygame.font.SysFont(None, 60)
 
-        self.menu_otevrene = False 
+        self.menu_otevrene = False
+        self.odrazu = 0
         self.menu_vyska = 0 
-        self.menu_max_vyska = vyska 
-        self.rychlost = 1 
-        self.animace_trvani = 500 # ms (0.5 sekundy) 
-        self.animace_start = 0 
-        self.start_vyska = 0 
-        self.cil_vyska = 0
+        self.menu_max_vyska = vyska
+        self.menu_gravitace = 0.005
+        self.menu_rychlost = 0
         self.menu_rect = pygame.Rect(self.sirka - 90, 20, 70, 60)
 
 
     def update(self): 
-        ted = pygame.time.get_ticks() 
-        t = (ted - self.animace_start) / self.animace_trvani 
-        # clamp 0–1 
-        if t > 1: 
-            t = 1 
-        t = t * t * (3 - 2 * t) 
-        self.menu_vyska = self.start_vyska + (self.cil_vyska - self.start_vyska) * t
+        #print(self.menu_vyska, self.menu_otevrene)
+        if 0 <=self.menu_vyska < self.menu_max_vyska and self.menu_otevrene:
+            print("Otevírám menu")
+            self.menu_rychlost += self.menu_gravitace
+            self.menu_vyska += self.menu_rychlost
+            if self.menu_vyska > self.menu_max_vyska:
+                self.odrazu += 1
+                self.menu_vyska -= self.menu_rychlost
+                self.menu_rychlost = self.menu_rychlost * -0.5
+                self.menu_vyska += self.menu_rychlost
+        elif 0 < self.menu_vyska <= self.menu_max_vyska and not self.menu_otevrene:
+            self.menu_rychlost -= self.menu_gravitace
+            self.menu_vyska += self.menu_rychlost
+            if self.menu_vyska < 0:
+                self.odrazu += 1
+                self.menu_vyska -= self.menu_rychlost
+                self.menu_rychlost = self.menu_rychlost * -0.5
+                self.menu_vyska += self.menu_rychlost
 
 
     def nakresli(self, okno):

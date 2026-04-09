@@ -19,10 +19,7 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if lista.menu_rect.collidepoint(event.pos):
                 lista.menu_otevrene = not lista.menu_otevrene
-                
-                lista.animace_start = pygame.time.get_ticks()
-                lista.start_vyska = lista.menu_vyska
-                lista.cil_vyska = lista.menu_max_vyska if lista.menu_otevrene else 0
+                lista.odrazu = 0
     screen.fill((255, 255, 255))
 
     lista.update()
