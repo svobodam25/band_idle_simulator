@@ -286,13 +286,14 @@ class Lista():
             self._draw_scrollbar(okno)
         
         # Draw audience at the bottom with jumping effect (multiple instances to cover width)
-        t = time.time()
-        for i in range(5):
-            # Jumping: absolute sine wave makes it bounce. Offset the sine wave so they jump slightly out of sync
-            jump_offset = abs(math.sin(t * 5 + i * 0.5)) * 20
-            audience_y = self.vyska_okna - 163 - int(jump_offset)
-            audience_x = (i * 180) - 40  # Spread them evenly with some overlap across the 800px width
-            okno.blit(self.audience_image, (audience_x, audience_y))
+        if not self.menu_otevrene:
+            t = time.time()
+            for i in range(5):
+                # Jumping: absolute sine wave makes it bounce. Offset the sine wave so they jump slightly out of sync
+                jump_offset = abs(math.sin(t * 5 + i * 0.5)) * 20
+                audience_y = self.vyska_okna - 163 - int(jump_offset)
+                audience_x = (i * 180) - 40  # Spread them evenly with some overlap across the 800px width
+                okno.blit(self.audience_image, (audience_x, audience_y))
         
         # Draw header bar on top (always on top)
         pygame.draw.rect(okno, self.barva, (0, 0, self.sirka, self.vyska))
