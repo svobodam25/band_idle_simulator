@@ -7,7 +7,7 @@ class Lista():
         self.barva = (139, 69, 19)
         self.sirka = sirka
         self.vyska = 100
-        self.penize = 2000
+        self.penize = 20000
         self.font = pygame.font.SysFont(None, 60)
 
         self.menu_otevrene = False
@@ -46,6 +46,11 @@ class Lista():
         self.singer_y = 300
         self.singer_image = pygame.image.load("obrazky/docasny_zpevak.png")
         self.singer_rect = self.singer_image.get_rect(center=(self.singer_x, self.singer_y))
+
+        # Logo properties
+        self.logo_image = pygame.image.load("obrazky/logo.png")
+        self.logo_image = pygame.transform.smoothscale(self.logo_image, (120, 120))  # Resize logo to 120x120 with better quality
+        self.logo_rect = self.logo_image.get_rect(center=(70, 50))
 
         self.button_text_disabled = self.button_font.render("Koupit", True, (100, 100, 100))
 
@@ -132,6 +137,9 @@ class Lista():
         
         # Draw header bar on top (always on top)
         pygame.draw.rect(okno, self.barva, (0, 0, self.sirka, self.vyska))
+
+        # Draw logo in top-left corner
+        okno.blit(self.logo_image, self.logo_rect)
 
         text = penize_font.render(f"{self.penize}$", True, (0, 0, 0))
         text_rect = text.get_rect(center=(self.sirka // 2, self.vyska // 2))
