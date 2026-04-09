@@ -51,7 +51,13 @@ while running:
                                 price = lista.item_prices.get(i, 0)
                                 if lista.penize >= price:
                                     lista.penize -= price
+<<<<<<< HEAD
                                     lista.bought_items.add(i)
+=======
+                                    # If item 0 (drummer) is purchased
+                                    if i == 0:
+                                        lista.drummer_active = True
+>>>>>>> origin/main
         if event.type == pygame.MOUSEWHEEL:
             if lista.menu_vyska > 0:
                 lista.handle_scroll(-event.y)

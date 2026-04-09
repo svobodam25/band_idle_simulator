@@ -21,7 +21,7 @@ class Lista():
         self.menu_rect = pygame.Rect(self.sirka - 90, 20, 70, 60)
         
         # Menu items
-        self.menu_items = ["Položka 1", "Položka 2", "Položka 3", "Položka 4", "Položka 5", "Položka 6", "Položka 7", "Položka 8"]
+        self.menu_items = ["Bubeník", "Položka 2", "Položka 3", "Položka 4", "Položka 5", "Položka 6", "Položka 7", "Položka 8"]
         self.item_prices = {0: 10, 1: 25, 2: 50, 3: 100, 4: 200, 5: 500, 6: 1000, 7: 2500}  # Price for each item
         self.bought_items = set()  # Track bought items
         self.item_height = 70
@@ -66,6 +66,17 @@ class Lista():
         self.logo_image = pygame.transform.smoothscale(self.logo_image, (120, 120))  # Resize logo to 120x120 with better quality
         self.logo_rect = self.logo_image.get_rect(center=(70, 50))
 
+        # Drummer properties
+        self.drummer_image = pygame.image.load("obrazky/bubenik.png")
+        self.drummer_image = pygame.transform.scale(self.drummer_image, (200, 200))  # Resize drummer to 200x200
+        self.drummer_rect = self.drummer_image.get_rect(center=(180, self.singer_y - 30))
+        self.drum_image = pygame.image.load("obrazky/docasne_buben.png")
+        self.drum_image = pygame.transform.scale(self.drum_image, (60, 60))  # Resize drum to 60x60
+        self.drum_rect = self.drum_image.get_rect(center=(180, self.singer_y + 80))
+        self.drummer_active = False  # Becomes True when purchased
+        self.drummer_timer = 0
+        self.drummer_duration = 600  # Not used anymore - drummer is permanent once purchased
+
         self.button_text_disabled = self.button_font.render("Koupit", True, (100, 100, 100))
 
 
@@ -97,6 +108,7 @@ class Lista():
                 if self.odrazu >= 10:
                     self.menu_vyska = 0
         
+<<<<<<< HEAD
         # Update singer animation
         if abs(self.singer_scale - self.singer_target_scale) > 0.01:
             self.singer_scale += (self.singer_target_scale - self.singer_scale) * self.singer_animation_speed
@@ -107,10 +119,13 @@ class Lista():
                 self.singer_target_scale = 0.85
             elif abs(self.singer_target_scale - 0.85) < 0.01 and abs(self.singer_scale - 0.85) < 0.01:
                 self.singer_target_scale = 1.0
+=======
+        # Drummer stays active permanently once purchased (no timer countdown)
+>>>>>>> origin/main
 
 
     def nakresli(self, okno):
-        # Draw background
+        # Draw background always
         okno.blit(self.background_image, (0, 0))
         
         # Draw singer in the middle (background) with animation
@@ -120,6 +135,12 @@ class Lista():
         scaled_singer = pygame.transform.smoothscale(self.singer_image, (scaled_width, scaled_height))
         self.singer_rect = scaled_singer.get_rect(center=(self.singer_x, self.singer_y))
         okno.blit(scaled_singer, self.singer_rect)
+        
+        # Draw drummer and drum if active
+        if self.drummer_active:
+
+            okno.blit(self.drum_image, self.drum_rect)
+            okno.blit(self.drummer_image, self.drummer_rect)
         
         # Draw menu (above singer)
         if self.menu_vyska > 0:
