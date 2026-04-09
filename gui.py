@@ -28,7 +28,7 @@ class Lista():
         self.odrazu = 0
         self.menu_vyska = 0 
         self.menu_max_vyska = vyska
-        self.menu_gravitace = 0.005
+        self.menu_gravitace = 0.12
         self.menu_rychlost = 0
         self.menu_rect = pygame.Rect(self.sirka - 90, 20, 70, 60)
         
@@ -129,11 +129,33 @@ class Lista():
         self.button_text_disabled = self.button_font.render("Koupit", True, (100, 100, 100))
 
         self.settings_otevrene = False
+        self.settings_tab = 'Sound'
+        self.animations_disabled = False
+        self.fps_options = [30, 60, 120, 0]
+        self.fps_index = 1
+        self.ui_scale = 1.0
         
         self.btn_res_change = pygame.Rect(self.sirka // 2 - 100, self.vyska_okna // 2 + 10, 200, 40)
         self.prepnut_rozliseni_v_hlavnim = False
         
         self._aktualizovat_rozmery_okna(sirka, vyska)
+
+    def set_ui_scale(self, new_scale):
+        self.ui_scale = max(0.5, min(2.0, float(new_scale)))
+
+    def screen_to_ui_pos(self, screen_pos):
+        scale = float(getattr(self, 'ui_scale', 1.0))
+        if abs(scale - 1.0) < 1e-6:
+            return screen_pos
+
+        ui_w = max(1, int(round(self.sirka * scale)))
+        ui_h = max(1, int(round(self.vyska_okna * scale)))
+        offset_x = (self.sirka - ui_w) // 2
+        offset_y = (self.vyska_okna - ui_h) // 2
+
+        x = (screen_pos[0] - offset_x) / scale
+        y = (screen_pos[1] - offset_y) / scale
+        return (x, y)
 
     def _aktualizovat_rozmery_okna(self, sirka, vyska):
         self.sirka = sirka
@@ -142,18 +164,30 @@ class Lista():
         
         self.menu_rect = pygame.Rect(self.sirka - 90, 20, 70, 60)
         
-        self.settings_rect = pygame.Rect(self.sirka // 2 - 200, self.vyska_okna // 2 - 175, 400, 350)
-        self.btn_vol_minus = pygame.Rect(self.settings_rect.x + 50, self.settings_rect.y + 60, 50, 50)
-        self.btn_vol_plus = pygame.Rect(self.settings_rect.x + 300, self.settings_rect.y + 60, 50, 50)
+        self.settings_rect = pygame.Rect(self.sirka // 2 - 250, self.vyska_okna // 2 - 220, 500, 460)
         self.btn_zavrit_nastaveni = pygame.Rect(self.settings_rect.right - 40, self.settings_rect.y + 10, 30, 30)
-        self.btn_res_change = pygame.Rect(self.settings_rect.centerx - 100, self.settings_rect.y + 200, 200, 40)
-        self.btn_exit_game = pygame.Rect(self.settings_rect.centerx - 100, self.settings_rect.y + 270, 200, 40)
+        
+        tab_w = 140
+        self.btn_tab_sound = pygame.Rect(self.settings_rect.x + 30, self.settings_rect.y + 60, tab_w, 40)
+        self.btn_tab_graphics = pygame.Rect(self.btn_tab_sound.right + 10, self.settings_rect.y + 60, tab_w, 40)
+        self.btn_tab_developer = pygame.Rect(self.btn_tab_graphics.right + 10, self.settings_rect.y + 60, tab_w, 40)
+        
+        self.btn_vol_minus = pygame.Rect(self.settings_rect.centerx - 100, self.settings_rect.y + 180, 50, 50)
+        self.btn_vol_plus = pygame.Rect(self.settings_rect.centerx + 50, self.settings_rect.y + 180, 50, 50)
+        
+        self.btn_res_change = pygame.Rect(self.settings_rect.centerx - 100, self.settings_rect.y + 130, 200, 40)
+        self.btn_anim_toggle = pygame.Rect(self.settings_rect.centerx - 100, self.settings_rect.y + 185, 200, 40)
+        self.btn_fps_change = pygame.Rect(self.settings_rect.centerx - 100, self.settings_rect.y + 240, 200, 40)
+        self.btn_ui_scale_minus = pygame.Rect(self.settings_rect.centerx - 170, self.settings_rect.y + 295, 40, 40)
+        self.btn_ui_scale_plus = pygame.Rect(self.settings_rect.centerx + 130, self.settings_rect.y + 295, 40, 40)
+        
+        self.btn_exit_game = pygame.Rect(self.settings_rect.centerx - 100, self.settings_rect.bottom - 60, 200, 40)
         
         self.settings_font = pygame.font.SysFont(None, 45)
         self.vol_btn_font = pygame.font.SysFont(None, 60)
         self.res_font = pygame.font.SysFont(None, 35)
 
-        self.menu_gravitace = 0.005 if self.vyska_okna <= 600 else 0.015
+        self.menu_gravitace = 0.12 if self.vyska_okna <= 600 else 0.28
 
         self.singer_x = self.sirka // 2
         self.singer_y = (self.vyska_okna // 2) + 100 if self.vyska_okna > 600 else self.vyska_okna // 2
@@ -219,7 +253,7 @@ class Lista():
                 self.menu_vyska -= self.menu_rychlost
                 self.menu_rychlost = self.menu_rychlost * -0.5
                 self.menu_vyska += self.menu_rychlost
-                if self.odrazu >= 10:
+                if self.odrazu >= 6:
                     self.menu_vyska = self.menu_max_vyska
         elif 0 < self.menu_vyska <= self.menu_max_vyska and not self.menu_otevrene:
             nasobitel_zavirani = 5 if self.vyska_okna > 600 else 2
@@ -228,6 +262,16 @@ class Lista():
             if self.menu_vyska <= 0:
                 self.menu_vyska = 0
                 self.menu_rychlost = 0
+
+        # When animations are disabled, keep all performer scales static.
+        if getattr(self, 'animations_disabled', False):
+            self.drum_scale = 1.0
+            self.drum_target_scale = 1.0
+            self.guitar_scale = 1.0
+            self.guitar_target_scale = 1.0
+            self.singer_scale = 1.0
+            self.singer_target_scale = 1.0
+            return
         
 
         if hasattr(self, 'drum_scale'):
@@ -310,6 +354,22 @@ class Lista():
             temp_guitarist_rect = scaled_guitarist.get_rect(center=temp_guitarist_rect.center)
             okno.blit(scaled_guitarist, temp_guitarist_rect)
 
+        ui_layer = pygame.Surface((self.sirka, self.vyska_okna), pygame.SRCALPHA)
+        self._draw_ui_layer(ui_layer)
+
+        scale = float(getattr(self, 'ui_scale', 1.0))
+        if abs(scale - 1.0) < 1e-6:
+            okno.blit(ui_layer, (0, 0))
+        else:
+            scaled_w = max(1, int(round(self.sirka * scale)))
+            scaled_h = max(1, int(round(self.vyska_okna * scale)))
+            scaled_ui = pygame.transform.smoothscale(ui_layer, (scaled_w, scaled_h))
+            offset_x = (self.sirka - scaled_w) // 2
+            offset_y = (self.vyska_okna - scaled_h) // 2
+            okno.blit(scaled_ui, (offset_x, offset_y))
+
+    def _draw_ui_layer(self, okno):
+
         if self.menu_vyska > 0:
             tmava_hneda = (90, 50, 20)
             pygame.draw.rect(okno, tmava_hneda, (0, self.vyska, self.sirka, self.menu_vyska))
@@ -369,6 +429,7 @@ class Lista():
         
         if not self.menu_otevrene:
             t = time.time()
+            animace_vypnute = getattr(self, 'animations_disabled', False)
             
             je_full_hd = self.vyska_okna > 600
             pocet_rad = 2 if je_full_hd else 1
@@ -393,7 +454,7 @@ class Lista():
                         if abs(stred_fanouska - self.sirka // 2) < 300:
                             continue
 
-                    jump_offset = abs(math.sin(t * 5 + i * 0.5 + row * 2.0)) * 20
+                    jump_offset = 0 if animace_vypnute else abs(math.sin(t * 5 + i * 0.5 + row * 2.0)) * 20
                     audience_y = base_y - int(jump_offset)
                     okno.blit(self.audience_image, (audience_x, audience_y))
         
@@ -429,57 +490,97 @@ class Lista():
             overlay.fill((0, 0, 0))
             okno.blit(overlay, (0, 0))
 
-            pygame.draw.rect(okno, (200, 200, 200), self.settings_rect, border_radius=15)
+            pygame.draw.rect(okno, (220, 220, 220), self.settings_rect, border_radius=15)
             pygame.draw.rect(okno, (0, 0, 0), self.settings_rect, 3, border_radius=15)
             
             nadpis_text = self.settings_font.render("Nastavení", True, (0, 0, 0))
-            nadpis_rect = nadpis_text.get_rect(center=(self.settings_rect.centerx, self.settings_rect.y + 30))
-            okno.blit(nadpis_text, nadpis_rect)
+            okno.blit(nadpis_text, nadpis_text.get_rect(center=(self.settings_rect.centerx, self.settings_rect.y + 30)))
 
-            vol_text = self.res_font.render(f"Hlasitost hudby:", True, (0, 0, 0))
-            vol_rect = vol_text.get_rect(center=(self.settings_rect.centerx, self.settings_rect.y + 60))
-            okno.blit(vol_text, vol_rect)
+            # Tabs
+            def draw_tab(rect, label, is_active):
+                color = (255, 255, 255) if is_active else (170, 170, 170)
+                pygame.draw.rect(okno, color, rect, border_radius=8)
+                pygame.draw.rect(okno, (0, 0, 0), rect, 2, border_radius=8)
+                txt = self.res_font.render(label, True, (0, 0, 0))
+                okno.blit(txt, txt.get_rect(center=rect.center))
 
-            vol_val = self.settings_font.render(f"{int(self.hlasitost * 100)}%", True, (0, 0, 0))
-            vol_val_rect = vol_val.get_rect(center=(self.settings_rect.centerx, self.settings_rect.y + 85))
-            okno.blit(vol_val, vol_val_rect)
+            draw_tab(self.btn_tab_sound, "Zvuk", getattr(self, 'settings_tab', '') == "Sound")
+            draw_tab(self.btn_tab_graphics, "Grafika", getattr(self, 'settings_tab', '') == "Graphics")
+            draw_tab(self.btn_tab_developer, "Vývojáři", getattr(self, 'settings_tab', '') == "Developer")
 
-            pygame.draw.rect(okno, (255, 100, 100), self.btn_vol_minus, border_radius=10)
-            pygame.draw.rect(okno, (0, 0, 0), self.btn_vol_minus, 2, border_radius=10)
-            minus_text = self.vol_btn_font.render("-", True, (0, 0, 0))
-            minus_rect = minus_text.get_rect(center=self.btn_vol_minus.center)
-            okno.blit(minus_text, minus_rect)
-
-            pygame.draw.rect(okno, (100, 255, 100), self.btn_vol_plus, border_radius=10)
-            pygame.draw.rect(okno, (0, 0, 0), self.btn_vol_plus, 2, border_radius=10)
-            plus_text = self.vol_btn_font.render("+", True, (0, 0, 0))
-            plus_rect = plus_text.get_rect(center=self.btn_vol_plus.center)
-            okno.blit(plus_text, plus_rect)
-
-            res_text = self.res_font.render("Rozlišení okna:", True, (0, 0, 0))
-            res_rect = res_text.get_rect(center=(self.settings_rect.centerx, self.settings_rect.y + 160))
-            okno.blit(res_text, res_rect)
-
-            pygame.draw.rect(okno, (100, 150, 255), self.btn_res_change, border_radius=10)
-            pygame.draw.rect(okno, (0, 0, 0), self.btn_res_change, 2, border_radius=10)
+            tab = getattr(self, 'settings_tab', 'Sound')
             
-            rezim_text_str = "1920x1080 (FullHD)" if self.sirka == 800 else "800x600 (Normal)"
-            res_btn_text = self.res_font.render(rezim_text_str, True, (0, 0, 0))
-            res_btn_rect = res_btn_text.get_rect(center=self.btn_res_change.center)
-            okno.blit(res_btn_text, res_btn_rect)
+            if tab == "Sound":
+                vol_text = self.res_font.render("Hlasitost hudby:", True, (0, 0, 0))
+                okno.blit(vol_text, vol_text.get_rect(center=(self.settings_rect.centerx, self.settings_rect.y + 140)))
+                
+                vol_val = self.settings_font.render(f"{int(self.hlasitost * 100)}%", True, (0, 0, 0))
+                okno.blit(vol_val, vol_val.get_rect(center=(self.settings_rect.centerx, self.settings_rect.y + 205)))
 
+                pygame.draw.rect(okno, (255, 100, 100), self.btn_vol_minus, border_radius=10)
+                pygame.draw.rect(okno, (0, 0, 0), self.btn_vol_minus, 2, border_radius=10)
+                okno.blit(self.vol_btn_font.render("-", True, (0, 0, 0)), self.vol_btn_font.render("-", True, (0, 0, 0)).get_rect(center=self.btn_vol_minus.center))
+
+                pygame.draw.rect(okno, (100, 255, 100), self.btn_vol_plus, border_radius=10)
+                pygame.draw.rect(okno, (0, 0, 0), self.btn_vol_plus, 2, border_radius=10)
+                okno.blit(self.vol_btn_font.render("+", True, (0, 0, 0)), self.vol_btn_font.render("+", True, (0, 0, 0)).get_rect(center=self.btn_vol_plus.center))
+            
+            elif tab == "Graphics":
+                # Resolution
+                pygame.draw.rect(okno, (100, 150, 255), self.btn_res_change, border_radius=5)
+                pygame.draw.rect(okno, (0, 0, 0), self.btn_res_change, 2, border_radius=5)
+                res_txt = self.res_font.render("1920x1080" if self.sirka == 1920 else "800x600", True, (0, 0, 0))
+                okno.blit(res_txt, res_txt.get_rect(center=self.btn_res_change.center))
+
+                # Animations
+                anim_dis = getattr(self, 'animations_disabled', False)
+                anim_color = (255, 100, 100) if anim_dis else (100, 255, 100)
+                pygame.draw.rect(okno, anim_color, self.btn_anim_toggle, border_radius=5)
+                pygame.draw.rect(okno, (0, 0, 0), self.btn_anim_toggle, 2, border_radius=5)
+                anim_txt = self.res_font.render("Animace: VYP" if anim_dis else "Animace: ZAP", True, (0, 0, 0))
+                okno.blit(anim_txt, anim_txt.get_rect(center=self.btn_anim_toggle.center))
+
+                # FPS Limit
+                pygame.draw.rect(okno, (200, 200, 100), self.btn_fps_change, border_radius=5)
+                pygame.draw.rect(okno, (0, 0, 0), self.btn_fps_change, 2, border_radius=5)
+                opts = getattr(self, 'fps_options', [30, 60, 120, 0])
+                idx = getattr(self, 'fps_index', 1)
+                fps_val = opts[idx]
+                fps_str = f"FPS Lock: {fps_val}" if fps_val > 0 else "FPS Limit: Bez limitu"
+                fps_txt = self.res_font.render(fps_str, True, (0, 0, 0))
+                okno.blit(fps_txt, fps_txt.get_rect(center=self.btn_fps_change.center))
+
+                # UI Scale
+                scale_val = getattr(self, 'ui_scale', 1.0)
+                scale_txt = self.res_font.render(f"UI Scale: {scale_val:.1f}x", True, (0, 0, 0))
+                okno.blit(scale_txt, scale_txt.get_rect(center=(self.settings_rect.centerx, self.settings_rect.y + 315)))
+                
+                pygame.draw.rect(okno, (255, 150, 150), self.btn_ui_scale_minus, border_radius=5)
+                pygame.draw.rect(okno, (0, 0, 0), self.btn_ui_scale_minus, 2, border_radius=5)
+                okno.blit(self.res_font.render("-", True, (0, 0, 0)), self.res_font.render("-", True, (0, 0, 0)).get_rect(center=self.btn_ui_scale_minus.center))
+
+                pygame.draw.rect(okno, (150, 255, 150), self.btn_ui_scale_plus, border_radius=5)
+                pygame.draw.rect(okno, (0, 0, 0), self.btn_ui_scale_plus, 2, border_radius=5)
+                okno.blit(self.res_font.render("+", True, (0, 0, 0)), self.res_font.render("+", True, (0, 0, 0)).get_rect(center=self.btn_ui_scale_plus.center))
+
+            elif tab == "Developer":
+                devs = ["Michal Svoboda", "Štěpán Šitina", "Daniel Wales"]
+                dev_title = self.res_font.render("Autoři hry:", True, (0, 0, 0))
+                okno.blit(dev_title, dev_title.get_rect(center=(self.settings_rect.centerx, self.settings_rect.y + 140)))
+                
+                for idx, dev in enumerate(devs):
+                    txt = self.settings_font.render(dev, True, (80, 80, 80))
+                    okno.blit(txt, txt.get_rect(center=(self.settings_rect.centerx, self.settings_rect.y + 200 + (idx * 40))))
+
+            # Close Button
             pygame.draw.rect(okno, (255, 100, 100), self.btn_exit_game, border_radius=10)
             pygame.draw.rect(okno, (0, 0, 0), self.btn_exit_game, 2, border_radius=10)
-            exit_btn_text = self.res_font.render("Odejít ze hry", True, (0, 0, 0))
-            exit_btn_rect = exit_btn_text.get_rect(center=self.btn_exit_game.center)
-            okno.blit(exit_btn_text, exit_btn_rect)
+            okno.blit(self.res_font.render("Odejít ze hry", True, (0, 0, 0)), self.res_font.render("Odejít ze hry", True, (0, 0, 0)).get_rect(center=self.btn_exit_game.center))
 
-            self.btn_zavrit_nastaveni = pygame.Rect(self.settings_rect.right - 40, self.settings_rect.y + 10, 30, 30)
             pygame.draw.rect(okno, (220, 50, 50), self.btn_zavrit_nastaveni, border_radius=5)
             pygame.draw.rect(okno, (0, 0, 0), self.btn_zavrit_nastaveni, 2, border_radius=5)
             zavrit_text = self.settings_font.render("X", True, (255, 255, 255))
-            zavrit_rect = zavrit_text.get_rect(center=self.btn_zavrit_nastaveni.center)
-            okno.blit(zavrit_text, zavrit_rect)
+            okno.blit(zavrit_text, zavrit_text.get_rect(center=self.btn_zavrit_nastaveni.center))
     
     def _draw_scrollbar(self, okno):
         """Draw scrollbar on the right side of the menu"""

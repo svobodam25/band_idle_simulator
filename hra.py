@@ -15,6 +15,8 @@ last_income_update = time.time()
 last_drum_hit = time.time()
 last_guitar_strum = time.time()
 
+clock = pygame.time.Clock()
+
 running = True
 while running:
     for event in pygame.event.get():
@@ -22,26 +24,58 @@ while running:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
+                ui_pos = lista.screen_to_ui_pos(event.pos) if hasattr(lista, 'screen_to_ui_pos') else event.pos
+
                 if lista.settings_otevrene:
-                    if hasattr(lista, 'btn_zavrit_nastaveni') and lista.btn_zavrit_nastaveni.collidepoint(event.pos):
+                    if hasattr(lista, 'btn_zavrit_nastaveni') and lista.btn_zavrit_nastaveni.collidepoint(ui_pos):
                         lista.settings_otevrene = False
-                    elif lista.btn_vol_minus.collidepoint(event.pos):
-                        lista.upravit_hlasitost(-0.1)
-                    elif lista.btn_vol_plus.collidepoint(event.pos):
-                        lista.upravit_hlasitost(0.1)
-                    elif hasattr(lista, 'btn_res_change') and lista.btn_res_change.collidepoint(event.pos):
-                        if width == 800:
-                            width, height = 1920, 1080
-                            screen = pygame.display.set_mode((width, height), pygame.FULLSCREEN)
-                        else:
-                            width, height = 800, 600
-                            screen = pygame.display.set_mode((width, height))
-                        lista._aktualizovat_rozmery_okna(width, height)
-                    elif hasattr(lista, 'btn_exit_game') and lista.btn_exit_game.collidepoint(event.pos):
+                    elif hasattr(lista, 'btn_exit_game') and lista.btn_exit_game.collidepoint(ui_pos):
                         running = False
+                        
+                    elif hasattr(lista, 'btn_tab_sound') and lista.btn_tab_sound.collidepoint(ui_pos):
+                        lista.settings_tab = 'Sound'
+                    elif hasattr(lista, 'btn_tab_graphics') and lista.btn_tab_graphics.collidepoint(ui_pos):
+                        lista.settings_tab = 'Graphics'
+                    elif hasattr(lista, 'btn_tab_developer') and lista.btn_tab_developer.collidepoint(ui_pos):
+                        lista.settings_tab = 'Developer'
+
+                    if getattr(lista, 'settings_tab', 'Sound') == 'Sound':
+                        if hasattr(lista, 'btn_vol_minus') and lista.btn_vol_minus.collidepoint(ui_pos):
+                            lista.upravit_hlasitost(-0.1)
+                        elif hasattr(lista, 'btn_vol_plus') and lista.btn_vol_plus.collidepoint(ui_pos):
+                            lista.upravit_hlasitost(0.1)
+
+                    elif getattr(lista, 'settings_tab', 'Sound') == 'Graphics':
+                        if hasattr(lista, 'btn_res_change') and lista.btn_res_change.collidepoint(ui_pos):
+                            if width == 800:
+                                width, height = 1920, 1080
+                                screen = pygame.display.set_mode((width, height), pygame.FULLSCREEN)
+                            else:
+                                width, height = 800, 600
+                                screen = pygame.display.set_mode((width, height))
+                            lista._aktualizovat_rozmery_okna(width, height)
+                            
+                        elif hasattr(lista, 'btn_anim_toggle') and lista.btn_anim_toggle.collidepoint(ui_pos):
+                            lista.animations_disabled = not getattr(lista, 'animations_disabled', False)
+                            
+                        elif hasattr(lista, 'btn_fps_change') and lista.btn_fps_change.collidepoint(ui_pos):
+                            opts = getattr(lista, 'fps_options', [30, 60, 120, 0])
+                            lista.fps_index = (getattr(lista, 'fps_index', 1) + 1) % len(opts)
+                            
+                        elif hasattr(lista, 'btn_ui_scale_minus') and lista.btn_ui_scale_minus.collidepoint(ui_pos):
+                            if hasattr(lista, 'set_ui_scale'):
+                                lista.set_ui_scale(getattr(lista, 'ui_scale', 1.0) - 0.1)
+                            else:
+                                lista.ui_scale = max(0.5, getattr(lista, 'ui_scale', 1.0) - 0.1)
+                        elif hasattr(lista, 'btn_ui_scale_plus') and lista.btn_ui_scale_plus.collidepoint(ui_pos):
+                            if hasattr(lista, 'set_ui_scale'):
+                                lista.set_ui_scale(getattr(lista, 'ui_scale', 1.0) + 0.1)
+                            else:
+                                lista.ui_scale = min(2.0, getattr(lista, 'ui_scale', 1.0) + 0.1)
+
                     continue
 
-                if lista.logo_rect.collidepoint(event.pos):
+                if lista.logo_rect.collidepoint(ui_pos):
                     lista.settings_otevrene = True
                     continue
 
@@ -49,18 +83,18 @@ while running:
                     lista.penize += lista.sila_kliku
                     lista.kliknuti_historie.append((time.time(), lista.sila_kliku))
                     lista.singer_target_scale = 1.15
-                elif lista.menu_rect.collidepoint(event.pos):
+                elif lista.menu_rect.collidepoint(ui_pos):
                     lista.menu_otevrene = not lista.menu_otevrene
                     lista.odrazu = 0
                     lista.menu_rychlost = 0
                     if not lista.menu_otevrene:
                         lista.scroll_offset = 0
                 elif lista.menu_vyska > 0:
-                    if hasattr(lista, 'rect_tab_clenove') and lista.rect_tab_clenove.collidepoint(event.pos):
+                    if hasattr(lista, 'rect_tab_clenove') and lista.rect_tab_clenove.collidepoint(ui_pos):
                         lista.aktivni_kategorie = "Členové"
                         lista.scroll_offset = 0
                         continue
-                    if hasattr(lista, 'rect_tab_vylepseni') and lista.rect_tab_vylepseni.collidepoint(event.pos):
+                    if hasattr(lista, 'rect_tab_vylepseni') and lista.rect_tab_vylepseni.collidepoint(ui_pos):
                         lista.aktivni_kategorie = "Vylepšení"
                         lista.scroll_offset = 0
                         continue
@@ -81,7 +115,7 @@ while running:
                             button_y = item_y + (lista.item_height - lista.button_height) // 2
                             button_rect = pygame.Rect(button_x, button_y, lista.button_width, lista.button_height)
                             
-                            if button_rect.collidepoint(event.pos):
+                            if button_rect.collidepoint(ui_pos):
                                 price = lista.item_prices[lista.aktivni_kategorie].get(i, 0)
                                 if lista.penize >= price:
                                     lista.penize -= price
@@ -152,6 +186,16 @@ while running:
     lista.nakresli(okno=screen)
 
     pygame.display.flip()
+    
+    # FPS Lock
+    if hasattr(lista, 'fps_options'):
+        fps_opt = lista.fps_options[lista.fps_index]
+        if fps_opt > 0:
+            clock.tick(fps_opt)
+        else:
+            clock.tick()
+    else:
+        clock.tick()
 
 pygame.quit()
 sys.exit()
