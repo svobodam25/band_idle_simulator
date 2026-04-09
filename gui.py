@@ -49,6 +49,9 @@ class Lista():
         self.singer_y = 300
         self.singer_image = pygame.image.load("obrazky/docasny_zpevak.png")
         self.singer_rect = self.singer_image.get_rect(center=(self.singer_x, self.singer_y))
+        self.singer_scale = 1.0  # Current scale factor
+        self.singer_target_scale = 1.0  # Target scale factor
+        self.singer_animation_speed = 0.15  # How fast to animate
         
         # Background
         self.background_image = pygame.image.load("obrazky/docasne_pozadi.png")
@@ -89,15 +92,30 @@ class Lista():
                 self.menu_vyska += self.menu_rychlost
                 if self.odrazu >= 10:
                     self.menu_vyska = 0
+        
+        # Update singer animation
+        if abs(self.singer_scale - self.singer_target_scale) > 0.01:
+            self.singer_scale += (self.singer_target_scale - self.singer_scale) * self.singer_animation_speed
+        else:
+            self.singer_scale = self.singer_target_scale
+            # Sequence animation: 1.0 -> 1.15 -> 0.85 -> 1.0
+            if abs(self.singer_target_scale - 1.15) < 0.01 and abs(self.singer_scale - 1.15) < 0.01:
+                self.singer_target_scale = 0.85
+            elif abs(self.singer_target_scale - 0.85) < 0.01 and abs(self.singer_scale - 0.85) < 0.01:
+                self.singer_target_scale = 1.0
 
 
     def nakresli(self, okno):
         # Draw background
         okno.blit(self.background_image, (0, 0))
         
-        # Draw singer in the middle (background)
-        self.singer_rect.center = (self.singer_x, self.singer_y)
-        okno.blit(self.singer_image, self.singer_rect)
+        # Draw singer in the middle (background) with animation
+        # Scale the singer image
+        scaled_width = int(self.singer_image.get_width() * self.singer_scale)
+        scaled_height = int(self.singer_image.get_height() * self.singer_scale)
+        scaled_singer = pygame.transform.smoothscale(self.singer_image, (scaled_width, scaled_height))
+        self.singer_rect = scaled_singer.get_rect(center=(self.singer_x, self.singer_y))
+        okno.blit(scaled_singer, self.singer_rect)
         
         # Draw menu (above singer)
         if self.menu_vyska > 0:

@@ -23,6 +23,7 @@ while running:
                 # Check if singer was clicked
                 if lista.singer_rect.collidepoint(event.pos):
                     lista.penize += 1
+                    lista.singer_target_scale = 1.15  # Animate singer
                 # Check if menu button was clicked
                 elif lista.menu_rect.collidepoint(event.pos):
                     lista.menu_otevrene = not lista.menu_otevrene
