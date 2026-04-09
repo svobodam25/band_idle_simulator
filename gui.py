@@ -2,6 +2,9 @@ import pygame
 import time
 import math
 
+pygame.init()
+pygame.font.init()
+
 penize_font = pygame.font.SysFont(None, 60)
 
 class Lista():
@@ -23,7 +26,7 @@ class Lista():
         self.menu_rect = pygame.Rect(self.sirka - 90, 20, 70, 60)
         
         # Menu items
-        self.menu_items = ["Bubeník", "Položka 2", "Položka 3", "Položka 4", "Položka 5", "Položka 6", "Položka 7", "Položka 8"]
+        self.menu_items = ["Bubeník", "Kytarista", "Položka 3", "Položka 4", "Položka 5", "Položka 6", "Položka 7", "Položka 8"]
         self.item_prices = {0: 25, 1: 75, 2: 150, 3: 300, 4: 600, 5: 1000, 6: 1800, 7: 3000}  # Price for each item
         self.bought_items = set()  # Track bought items
         self.item_height = 70
@@ -76,7 +79,23 @@ class Lista():
         self.drum_image = pygame.transform.scale(self.drum_image, (60, 60))  # Resize drum to 60x60
         self.drum_rect = self.drum_image.get_rect(center=(180, self.singer_y + 80))
         self.drummer_active = False  # Becomes True when purchased
+
+        # Guitarist properties
+        self.guitarist_image = pygame.image.load("obrazky/kytarista.png")
+        self.guitarist_image = pygame.transform.scale(self.guitarist_image, (200, 200))
+        self.guitarist_rect = self.guitarist_image.get_rect(center=(self.sirka - 180, self.singer_y - 30))
+        self.guitarist_active = False
         
+        # Animace a zvuk kytary
+        self.guitar_scale = 1.0
+        self.guitar_target_scale = 1.0
+        self.guitar_animation_speed = 0.35  # Rychlejší animace než u bubnu
+        try:
+            self.guitar_sound = pygame.mixer.Sound("zvuky/kytara.wav")
+            self.guitar_sound.set_volume(0.2)
+        except:
+            self.guitar_sound = None
+
         # Animace a zvuk bubnu
         self.drum_scale = 1.0
         self.drum_target_scale = 1.0
@@ -84,6 +103,7 @@ class Lista():
         try:
             pygame.mixer.init()
             self.drum_sound = pygame.mixer.Sound("zvuky/buben.wav")
+            self.drum_sound.set_volume(0.2)
         except:
             self.drum_sound = None
 
@@ -95,7 +115,11 @@ class Lista():
         if self.drum_sound:
             self.drum_sound.play()
 
-
+    def zahraj_na_kytaru(self):
+        """Spustí animaci a popř. zvuk kytary."""
+        self.guitar_target_scale = 1.3
+        if self.guitar_sound:
+            self.guitar_sound.play()
 
     def update(self): 
         if not self.menu_otevrene and self.menu_vyska >= 600:
@@ -130,6 +154,15 @@ class Lista():
                 # Pokud buben dosáhl maximálního zvětšení, vrátí se zpět
                 if abs(self.drum_target_scale - 1.3) < 0.01 and abs(self.drum_scale - 1.3) < 0.01:
                     self.drum_target_scale = 1.0
+
+        # Update guitar animation
+        if hasattr(self, 'guitar_scale'):
+            if abs(self.guitar_scale - self.guitar_target_scale) > 0.01:
+                self.guitar_scale += (self.guitar_target_scale - self.guitar_scale) * self.guitar_animation_speed
+            else:
+                self.guitar_scale = self.guitar_target_scale
+                if abs(self.guitar_target_scale - 1.3) < 0.01 and abs(self.guitar_scale - 1.3) < 0.01:
+                    self.guitar_target_scale = 1.0
 
         # Update singer animation
         if abs(self.singer_scale - self.singer_target_scale) > 0.01:
@@ -183,6 +216,22 @@ class Lista():
             okno.blit(scaled_drum, temp_drum_rect)
             okno.blit(self.drummer_image, temp_drummer_rect)
         
+        # Draw guitarist if active
+        if self.guitarist_active:
+            scale = getattr(self, 'guitar_scale', 1.0)
+            y_offset = (scale - 1.0) * -30  # Poskok nahoru
+            
+            temp_guitarist_rect = self.guitarist_rect.copy()
+            temp_guitarist_rect.y += int(y_offset)
+            
+            scaled_w = int(self.guitarist_image.get_width() * scale)
+            scaled_h = int(self.guitarist_image.get_height() * scale)
+            scaled_guitarist = pygame.transform.smoothscale(self.guitarist_image, (scaled_w, scaled_h))
+            
+            # Use the moved rect center
+            temp_guitarist_rect = scaled_guitarist.get_rect(center=temp_guitarist_rect.center)
+            okno.blit(scaled_guitarist, temp_guitarist_rect)
+
         # Draw menu (above singer)
         if self.menu_vyska > 0:
             tmava_hneda = (90, 50, 20)
@@ -236,13 +285,14 @@ class Lista():
             # Draw scrollbar
             self._draw_scrollbar(okno)
         
-        # Draw audience at the bottom (centered) with jumping effect
+        # Draw audience at the bottom with jumping effect (multiple instances to cover width)
         t = time.time()
-        # Jumping: absolute sine wave makes it bounce. Multiply by 20 for height, 5 for speed
-        jump_offset = abs(math.sin(t * 5)) * 20
-        audience_y = self.vyska_okna - 163 - int(jump_offset)
-        audience_x = (self.sirka - 218) // 2
-        okno.blit(self.audience_image, (audience_x, audience_y))
+        for i in range(5):
+            # Jumping: absolute sine wave makes it bounce. Offset the sine wave so they jump slightly out of sync
+            jump_offset = abs(math.sin(t * 5 + i * 0.5)) * 20
+            audience_y = self.vyska_okna - 163 - int(jump_offset)
+            audience_x = (i * 180) - 40  # Spread them evenly with some overlap across the 800px width
+            okno.blit(self.audience_image, (audience_x, audience_y))
         
         # Draw header bar on top (always on top)
         pygame.draw.rect(okno, self.barva, (0, 0, self.sirka, self.vyska))

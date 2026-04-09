@@ -13,6 +13,7 @@ pygame.display.set_caption("Band Idle Simulator")
 lista = gui.Lista(width, height)
 last_income_update = time.time()
 last_drum_hit = time.time()
+last_guitar_strum = time.time()
 
 running = True
 while running:
@@ -60,6 +61,11 @@ while running:
                                     if i == 0:
                                         lista.drummer_active = True
                                         lista.prijem += 2
+                                    
+                                    # If item 1 (guitarist) is purchased
+                                    elif i == 1:
+                                        lista.guitarist_active = True
+                                        lista.prijem += 3
 
         if event.type == pygame.MOUSEWHEEL:
             if lista.menu_vyska > 0:
@@ -78,6 +84,11 @@ while running:
     if lista.drummer_active and current_time - last_drum_hit >= 2.5:
         lista.zahraj_na_buben()
         last_drum_hit = current_time
+
+    # Guitarist strum frequency (e.g. every 1.5 seconds)
+    if lista.guitarist_active and current_time - last_guitar_strum >= 1.5:
+        lista.zahraj_na_kytaru()
+        last_guitar_strum = current_time
     
     lista.nakresli(okno=screen)
 
