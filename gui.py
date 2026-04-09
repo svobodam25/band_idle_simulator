@@ -32,9 +32,19 @@ class Lista():
         self.menu_rychlost = 0
         self.menu_rect = pygame.Rect(self.sirka - 90, 20, 70, 60)
         
-        self.menu_items = ["Mikrofon", "Bubeník", "Kytarista", "Položka 4", "Položka 5", "Položka 6", "Položka 7", "Položka 8"]
-        self.item_prices = {0: 25, 1: 75, 2: 150, 3: 300, 4: 600, 5: 1000, 6: 1800, 7: 3000}
-        self.bought_items = set()
+        self.kategorie = ["Členové", "Vylepšení"]
+        self.aktivni_kategorie = "Členové"
+
+        self.menu_items = {
+            "Členové": ["Mikrofon", "Bubeník", "Kytarista", "Položka 4", "Položka 5", "Položka 6", "Položka 7"],
+            "Vylepšení": ["Zlaté hlasivky (+1 Klik)", "Lepší paličky (+2 $/s)", "Lepší trsátko (+5 $/s)", "Těžké basy (+8 $/s)", "Lepší mikrofon (+5 Klik)"]
+        }
+        self.item_prices = {
+            "Členové": {0: 25, 1: 75, 2: 150, 3: 400, 4: 1000, 5: 3000, 6: 10000},
+            "Vylepšení": {0: 200, 1: 450, 2: 900, 3: 2000, 4: 5000}
+        }
+        self.bought_items = {"Členové": set(), "Vylepšení": set()}
+        
         self.item_height = 70
         self.item_spacing = 10
         self.scroll_offset = 0
@@ -304,42 +314,56 @@ class Lista():
             tmava_hneda = (90, 50, 20)
             pygame.draw.rect(okno, tmava_hneda, (0, self.vyska, self.sirka, self.menu_vyska))
             
-            menu_y = self.vyska + 5
+            tab_width = (self.sirka - 40) // 2
+            tab_y = self.vyska + 5
+            
+            self.rect_tab_clenove = pygame.Rect(20, tab_y, tab_width, 40)
+            self.rect_tab_vylepseni = pygame.Rect(20 + tab_width, tab_y, tab_width, 40)
+            
+            pygame.draw.rect(okno, (100, 100, 100) if self.aktivni_kategorie != "Členové" else (150, 80, 40), self.rect_tab_clenove)
+            pygame.draw.rect(okno, (100, 100, 100) if self.aktivni_kategorie != "Vylepšení" else (150, 80, 40), self.rect_tab_vylepseni)
+            
+            okno.blit(self.button_font.render("Členové", True, (255, 255, 255)), (self.rect_tab_clenove.x + 20, tab_y + 10))
+            okno.blit(self.button_font.render("Vylepšení", True, (255, 255, 255)), (self.rect_tab_vylepseni.x + 20, tab_y + 10))
+            
+            menu_y = self.vyska + 55
             visible_index = 0
-            for i in range(len(self.menu_items)):
-                if i in self.bought_items:
+            aktualni_polozky = self.menu_items[self.aktivni_kategorie]
+            for i in range(len(aktualni_polozky)):
+                if i in self.bought_items[self.aktivni_kategorie]:
                     continue
                 
-                item = self.menu_items[i]
+                item = aktualni_polozky[i]
                 item_y = menu_y + visible_index * (self.item_height + self.item_spacing) - self.scroll_offset
                 visible_index += 1
                 
                 if self.vyska < item_y + self.item_height < self.vyska + self.menu_vyska:
                     item_rect = pygame.Rect(5, item_y, self.sirka - self.scrollbar_width - 15, self.item_height)
-                    pygame.draw.rect(okno, self.item_color, item_rect, border_radius=10)
-                    
-                    item_text = self.font.render(item, True, (255, 255, 255))
-                    text_rect = item_text.get_rect(center=(self.sirka // 2 - 55, item_y + self.item_height // 2))
-                    okno.blit(item_text, text_rect)
-                    
-                    price = self.item_prices.get(i, 0)
-                    can_afford = self.penize >= price
-                    
-                    price_text = self.price_font.render(f"{price}$", True, (255, 255, 100))
-                    price_rect = price_text.get_rect(center=(40, item_y + self.item_height // 2))
-                    okno.blit(price_text, price_rect)
-                    
-                    button_x = self.sirka - self.scrollbar_width - self.button_width - 20
-                    button_y = item_y + (self.item_height - self.button_height) // 2
-                    button_rect = pygame.Rect(button_x, button_y, self.button_width, self.button_height)
-                    
-                    button_color = self.button_color if can_afford else self.button_disabled_color
-                    button_text_render = self.button_text if can_afford else self.button_text_disabled
-                    
-                    pygame.draw.rect(okno, button_color, button_rect, border_radius=8)
-                    
-                    button_text_rect = button_text_render.get_rect(center=button_rect.center)
-                    okno.blit(button_text_render, button_text_rect)
+                    if item_rect.bottom <= self.vyska_okna:
+                        pygame.draw.rect(okno, self.item_color, item_rect, border_radius=10)
+                        
+                        item_text = self.button_font.render(item, True, (255, 255, 255))
+                        text_rect = item_text.get_rect(center=(self.sirka // 2 - 55, item_y + self.item_height // 2))
+                        okno.blit(item_text, text_rect)
+                        
+                        price = self.item_prices[self.aktivni_kategorie].get(i, 0)
+                        can_afford = self.penize >= price
+                        
+                        price_text = self.price_font.render(f"{price}$", True, (255, 255, 100))
+                        price_rect = price_text.get_rect(center=(40, item_y + self.item_height // 2))
+                        okno.blit(price_text, price_rect)
+                        
+                        button_x = self.sirka - self.scrollbar_width - self.button_width - 20
+                        button_y = item_y + (self.item_height - self.button_height) // 2
+                        button_rect = pygame.Rect(button_x, button_y, self.button_width, self.button_height)
+                        
+                        button_color = self.button_color if can_afford else self.button_disabled_color
+                        button_text_render = self.button_text if can_afford else self.button_text_disabled
+                        
+                        pygame.draw.rect(okno, button_color, button_rect, border_radius=8)
+                        
+                        button_text_rect = button_text_render.get_rect(center=button_rect.center)
+                        okno.blit(button_text_render, button_text_rect)
             
             self._draw_scrollbar(okno)
         
@@ -465,7 +489,9 @@ class Lista():
         if self.menu_vyska < self.menu_max_vyska * 0.999:
             return
         
-        visible_items_count = len([i for i in range(len(self.menu_items)) if i not in self.bought_items])
+        aktualni = self.menu_items[self.aktivni_kategorie]
+        koupene = self.bought_items[self.aktivni_kategorie]
+        visible_items_count = len([i for i in range(len(aktualni)) if i not in koupene])
         total_content_height = visible_items_count * self.item_height + max(0, (visible_items_count - 1) * self.item_spacing)
         visible_height = min(self.menu_vyska, self.vyska_okna - self.vyska)
         max_scroll = max(0, total_content_height + 5 - visible_height)
@@ -490,7 +516,9 @@ class Lista():
         if self.menu_vyska <= 0:
             return
         
-        visible_items_count = len([i for i in range(len(self.menu_items)) if i not in self.bought_items])
+        aktualni = self.menu_items[self.aktivni_kategorie]
+        koupene = self.bought_items[self.aktivni_kategorie]
+        visible_items_count = len([i for i in range(len(aktualni)) if i not in koupene])
         total_content_height = visible_items_count * self.item_height + max(0, (visible_items_count - 1) * self.item_spacing)
         visible_height = min(self.menu_vyska, self.vyska_okna - self.vyska)
         max_scroll = max(0, total_content_height + 5 - visible_height)

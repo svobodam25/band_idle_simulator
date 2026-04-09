@@ -45,7 +45,7 @@ while running:
                     lista.settings_otevrene = True
                     continue
 
-                if lista.singer_rect.collidepoint(event.pos) or (lista.mikrofon_active and lista.mikrofon_rect.collidepoint(event.pos)):
+                if not lista.menu_otevrene and (lista.singer_rect.collidepoint(event.pos) or (lista.mikrofon_active and lista.mikrofon_rect.collidepoint(event.pos))):
                     lista.penize += lista.sila_kliku
                     lista.kliknuti_historie.append((time.time(), lista.sila_kliku))
                     lista.singer_target_scale = 1.15
@@ -56,13 +56,24 @@ while running:
                     if not lista.menu_otevrene:
                         lista.scroll_offset = 0
                 elif lista.menu_vyska > 0:
-                    menu_y = lista.vyska + 5
+                    if hasattr(lista, 'rect_tab_clenove') and lista.rect_tab_clenove.collidepoint(event.pos):
+                        lista.aktivni_kategorie = "Členové"
+                        lista.scroll_offset = 0
+                        continue
+                    if hasattr(lista, 'rect_tab_vylepseni') and lista.rect_tab_vylepseni.collidepoint(event.pos):
+                        lista.aktivni_kategorie = "Vylepšení"
+                        lista.scroll_offset = 0
+                        continue
+
+                    menu_obsah_y = lista.vyska + 55
                     visible_index = 0
-                    for i in range(len(lista.menu_items)):
-                        if i in lista.bought_items:
+                    aktualni_polozky = lista.menu_items[lista.aktivni_kategorie]
+                    
+                    for i in range(len(aktualni_polozky)):
+                        if i in lista.bought_items[lista.aktivni_kategorie]:
                             continue
                         
-                        item_y = menu_y + visible_index * (lista.item_height + lista.item_spacing) - lista.scroll_offset
+                        item_y = menu_obsah_y + visible_index * (lista.item_height + lista.item_spacing) - lista.scroll_offset
                         visible_index += 1
                         
                         if lista.vyska < item_y + lista.item_height < lista.vyska + lista.menu_vyska:
@@ -71,25 +82,37 @@ while running:
                             button_rect = pygame.Rect(button_x, button_y, lista.button_width, lista.button_height)
                             
                             if button_rect.collidepoint(event.pos):
-                                price = lista.item_prices.get(i, 0)
+                                price = lista.item_prices[lista.aktivni_kategorie].get(i, 0)
                                 if lista.penize >= price:
                                     lista.penize -= price
 
-
-                                    lista.bought_items.add(i)
-
-                                    if i == 0:
-                                        lista.mikrofon_active = True
-                                        lista.prijem += 1
-                                        lista.sila_kliku += 1
-                                    
-                                    elif i == 1:
-                                        lista.drummer_active = True
-                                        lista.prijem += 2
-                                    
-                                    elif i == 2:
-                                        lista.guitarist_active = True
-                                        lista.prijem += 3
+                                    if lista.aktivni_kategorie == "Členové":
+                                        lista.bought_items[lista.aktivni_kategorie].add(i)
+                                        if i == 0:
+                                            lista.mikrofon_active = True
+                                            lista.prijem += 1
+                                            lista.sila_kliku += 1
+                                        elif i == 1:
+                                            lista.drummer_active = True
+                                            lista.prijem += 2
+                                        elif i == 2:
+                                            lista.guitarist_active = True
+                                            lista.prijem += 3
+                                            
+                                    elif lista.aktivni_kategorie == "Vylepšení":
+                                        lista.item_prices["Vylepšení"][i] *= 3
+                                        if i == 0: 
+                                            lista.sila_kliku += 1
+                                        elif i == 1: 
+                                            if lista.drummer_active:
+                                                lista.prijem += 2
+                                        elif i == 2: 
+                                            if lista.guitarist_active:
+                                                lista.prijem += 5
+                                        elif i == 3:
+                                            lista.prijem += 8
+                                        elif i == 4:
+                                            lista.sila_kliku += 5
 
         if event.type == pygame.MOUSEWHEEL:
             if lista.menu_vyska > 0:
