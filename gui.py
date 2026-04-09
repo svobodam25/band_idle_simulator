@@ -24,7 +24,7 @@ class Lista():
         
         # Menu items
         self.menu_items = ["Bubeník", "Položka 2", "Položka 3", "Položka 4", "Položka 5", "Položka 6", "Položka 7", "Položka 8"]
-        self.item_prices = {0: 10, 1: 25, 2: 50, 3: 100, 4: 200, 5: 500, 6: 1000, 7: 2500}  # Price for each item
+        self.item_prices = {0: 25, 1: 75, 2: 150, 3: 300, 4: 600, 5: 1000, 6: 1800, 7: 3000}  # Price for each item
         self.bought_items = set()  # Track bought items
         self.item_height = 70
         self.item_spacing = 10
@@ -116,13 +116,9 @@ class Lista():
         elif 0 < self.menu_vyska <= self.menu_max_vyska and not self.menu_otevrene:
             self.menu_rychlost -= self.menu_gravitace
             self.menu_vyska += self.menu_rychlost
-            if self.menu_vyska < 0:
-                self.odrazu += 1
-                self.menu_vyska -= self.menu_rychlost
-                self.menu_rychlost = self.menu_rychlost * -0.5
-                self.menu_vyska += self.menu_rychlost
-                if self.odrazu >= 10:
-                    self.menu_vyska = 0
+            if self.menu_vyska <= 0:
+                self.menu_vyska = 0
+                self.menu_rychlost = 0
         
 
         # Drummer stays active permanently once purchased (no timer countdown)
