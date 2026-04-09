@@ -40,16 +40,15 @@ class Lista():
         self.button_font = pygame.font.SysFont(None, 30)
         self.price_font = pygame.font.SysFont(None, 25)
         self.button_text = self.button_font.render("Koupit", True, (255, 255, 255))
-<<<<<<< HEAD
-        
+
         # Singer properties
         self.singer_x = sirka // 2
         self.singer_y = 300
         self.singer_image = pygame.image.load("obrazky/docasny_zpevak.png")
         self.singer_rect = self.singer_image.get_rect(center=(self.singer_x, self.singer_y))
-=======
+
         self.button_text_disabled = self.button_font.render("Koupit", True, (100, 100, 100))
->>>>>>> origin/main
+
 
 
     def update(self): 
