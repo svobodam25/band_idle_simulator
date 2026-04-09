@@ -30,6 +30,13 @@ class Lista():
         self.scrollbar_color = (100, 100, 100)
         self.scrollbar_hover_color = (150, 150, 150)
         self.scrollbar_dragging = False
+        
+        # Button properties
+        self.button_color = (34, 139, 34)
+        self.button_height = 60
+        self.button_width = 80
+        self.button_font = pygame.font.SysFont(None, 30)
+        self.button_text = self.button_font.render("Koupit", True, (255, 255, 255))
 
 
     def update(self): 
@@ -95,6 +102,16 @@ class Lista():
                     item_text = self.font.render(item, True, (255, 255, 255))
                     text_rect = item_text.get_rect(center=(self.sirka // 2 - 55, item_y + self.item_height // 2))
                     okno.blit(item_text, text_rect)
+                    
+                    # Draw green buy button on the right
+                    button_x = self.sirka - self.scrollbar_width - self.button_width - 20
+                    button_y = item_y + (self.item_height - self.button_height) // 2
+                    button_rect = pygame.Rect(button_x, button_y, self.button_width, self.button_height)
+                    pygame.draw.rect(okno, self.button_color, button_rect, border_radius=8)
+                    
+                    # Draw "Koupit" text on button
+                    button_text_rect = self.button_text.get_rect(center=button_rect.center)
+                    okno.blit(self.button_text, button_text_rect)
             
             # Draw scrollbar
             self._draw_scrollbar(okno)
