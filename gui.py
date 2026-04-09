@@ -109,6 +109,20 @@ class Lista():
                     self.menu_vyska = 0
         
 
+        # Drummer stays active permanently once purchased (no timer countdown)
+
+        # Update singer animation
+        if abs(self.singer_scale - self.singer_target_scale) > 0.01:
+            self.singer_scale += (self.singer_target_scale - self.singer_scale) * self.singer_animation_speed
+        else:
+            self.singer_scale = self.singer_target_scale
+            # Sequence animation: 1.0 -> 1.15 -> 0.85 -> 1.0
+            if abs(self.singer_target_scale - 1.15) < 0.01 and abs(self.singer_scale - 1.15) < 0.01:
+                self.singer_target_scale = 0.85
+            elif abs(self.singer_target_scale - 0.85) < 0.01 and abs(self.singer_scale - 0.85) < 0.01:
+                self.singer_target_scale = 1.0
+
+
         # Update singer animation
         if abs(self.singer_scale - self.singer_target_scale) > 0.01:
             self.singer_scale += (self.singer_target_scale - self.singer_scale) * self.singer_animation_speed

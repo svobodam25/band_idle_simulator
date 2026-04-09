@@ -52,7 +52,13 @@ while running:
                                 if lista.penize >= price:
                                     lista.penize -= price
 
+
                                     lista.bought_items.add(i)
+
+                                    # If item 0 (drummer) is purchased
+                                    if i == 0:
+                                        lista.drummer_active = True
+
 
                                     # If item 0 (drummer) is purchased
                                     if i == 0:
