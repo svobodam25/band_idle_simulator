@@ -22,14 +22,39 @@ while running:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:  # Only left mouse button
+                if lista.settings_otevrene:
+                    if hasattr(lista, 'btn_zavrit_nastaveni') and lista.btn_zavrit_nastaveni.collidepoint(event.pos):
+                        lista.settings_otevrene = False
+                    elif lista.btn_vol_minus.collidepoint(event.pos):
+                        lista.upravit_hlasitost(-0.1)  # Snížit hlasitost o 10 %
+                    elif lista.btn_vol_plus.collidepoint(event.pos):
+                        lista.upravit_hlasitost(0.1)   # Zvýšit hlasitost o 10 %
+                    elif hasattr(lista, 'btn_res_change') and lista.btn_res_change.collidepoint(event.pos):
+                        if width == 800:
+                            width, height = 1920, 1080
+                            screen = pygame.display.set_mode((width, height), pygame.FULLSCREEN)
+                        else:
+                            width, height = 800, 600
+                            screen = pygame.display.set_mode((width, height))
+                        lista._aktualizovat_rozmery_okna(width, height)
+                    elif hasattr(lista, 'btn_exit_game') and lista.btn_exit_game.collidepoint(event.pos):
+                        running = False
+                    continue
+
+                # Check if logo was clicked
+                if lista.logo_rect.collidepoint(event.pos):
+                    lista.settings_otevrene = True
+                    continue
+
                 # Check if singer was clicked
-                if lista.singer_rect.collidepoint(event.pos):
-                    lista.penize += 1
+                if lista.singer_rect.collidepoint(event.pos) or (lista.mikrofon_active and lista.mikrofon_rect.collidepoint(event.pos)):
+                    lista.penize += lista.sila_kliku
                     lista.singer_target_scale = 1.15  # Animate singer
                 # Check if menu button was clicked
                 elif lista.menu_rect.collidepoint(event.pos):
                     lista.menu_otevrene = not lista.menu_otevrene
                     lista.odrazu = 0
+                    lista.menu_rychlost = 0  # Restarts velocity for immediate stop/reverse
                     if not lista.menu_otevrene:  # Reset scroll only when closing
                         lista.scroll_offset = 0
                 # Check for buy button clicks
@@ -57,19 +82,38 @@ while running:
 
                                     lista.bought_items.add(i)
 
-                                    # If item 0 (drummer) is purchased
+                                    # If item 0 (Microphone) is purchased
                                     if i == 0:
+                                        lista.mikrofon_active = True
+                                        lista.prijem += 1  # Mikrofon vydělává automaticky 1$ za vteřinu
+                                        lista.sila_kliku += 1 # A také přidává hodnotu pro ruční klikání
+                                    
+                                    # If item 1 (drummer) is purchased
+                                    elif i == 1:
                                         lista.drummer_active = True
                                         lista.prijem += 2
                                     
-                                    # If item 1 (guitarist) is purchased
-                                    elif i == 1:
+                                    # If item 2 (guitarist) is purchased
+                                    elif i == 2:
                                         lista.guitarist_active = True
                                         lista.prijem += 3
 
         if event.type == pygame.MOUSEWHEEL:
             if lista.menu_vyska > 0:
                 lista.handle_scroll(-event.y)
+                
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_F11:
+                if width == 800:
+                    width, height = 1920, 1080
+                    screen = pygame.display.set_mode((width, height), pygame.FULLSCREEN)
+                else:
+                    width, height = 800, 600
+                    screen = pygame.display.set_mode((width, height))
+                lista._aktualizovat_rozmery_okna(width, height)
+            elif event.key == pygame.K_ESCAPE:
+                lista.settings_otevrene = not lista.settings_otevrene
+                
     screen.fill((255, 255, 255))
 
     lista.update()
