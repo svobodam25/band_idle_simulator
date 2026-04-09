@@ -108,7 +108,7 @@ class Lista():
                 if self.odrazu >= 10:
                     self.menu_vyska = 0
         
-<<<<<<< HEAD
+
         # Update singer animation
         if abs(self.singer_scale - self.singer_target_scale) > 0.01:
             self.singer_scale += (self.singer_target_scale - self.singer_scale) * self.singer_animation_speed
@@ -119,10 +119,6 @@ class Lista():
                 self.singer_target_scale = 0.85
             elif abs(self.singer_target_scale - 0.85) < 0.01 and abs(self.singer_scale - 0.85) < 0.01:
                 self.singer_target_scale = 1.0
-=======
-        # Drummer stays active permanently once purchased (no timer countdown)
->>>>>>> origin/main
-
 
     def nakresli(self, okno):
         # Draw background always
