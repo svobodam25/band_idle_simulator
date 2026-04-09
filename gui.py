@@ -6,6 +6,7 @@ class Lista():
     def __init__(self, sirka, vyska):
         self.barva = (139, 69, 19)
         self.sirka = sirka
+        self.vyska_okna = vyska  # Store window height
         self.vyska = 100
         self.penize = 2000
         self.font = pygame.font.SysFont(None, 60)
@@ -156,20 +157,24 @@ class Lista():
         if self.menu_vyska < self.menu_max_vyska * 0.999:
             return
         
-        total_content_height = len(self.menu_items) * (self.item_height + self.item_spacing)
-        visible_height = self.menu_vyska
+        # Total content height = items height + spacing between items (not after last item)
+        total_content_height = len(self.menu_items) * self.item_height + max(0, (len(self.menu_items) - 1) * self.item_spacing)
+        # Visible height is limited by window height
+        visible_height = min(self.menu_vyska, self.vyska_okna - self.vyska)
+        # Account for the 5px offset at the top
+        max_scroll = max(0, total_content_height + 5 - visible_height)
         
-        if total_content_height <= visible_height:
+        if total_content_height <= visible_height - 5:
             return
         
         # Scrollbar track
         scrollbar_x = self.sirka - self.scrollbar_width - 2
-        track_rect = pygame.Rect(scrollbar_x, self.vyska, self.scrollbar_width, self.menu_vyska)
+        track_rect = pygame.Rect(scrollbar_x, self.vyska, self.scrollbar_width, visible_height)
         pygame.draw.rect(okno, (50, 50, 50), track_rect)
         
         # Scrollbar handle
-        handle_height = max(20, (visible_height / total_content_height) * self.menu_vyska)
-        handle_y = self.vyska + (self.scroll_offset / total_content_height) * (self.menu_vyska - handle_height)
+        handle_height = max(20, (visible_height / (total_content_height + 5)) * visible_height)
+        handle_y = self.vyska + (self.scroll_offset / max_scroll) * (visible_height - handle_height) if max_scroll > 0 else self.vyska
         handle_rect = pygame.Rect(scrollbar_x, handle_y, self.scrollbar_width, handle_height)
         
         mouse_pos = pygame.mouse.get_pos()
@@ -181,9 +186,12 @@ class Lista():
         if self.menu_vyska <= 0:
             return
         
-        total_content_height = len(self.menu_items) * (self.item_height + self.item_spacing)
-        visible_height = self.menu_vyska
-        max_scroll = max(0, total_content_height - visible_height)
+        # Total content height = items height + spacing between items (not after last item)
+        total_content_height = len(self.menu_items) * self.item_height + max(0, (len(self.menu_items) - 1) * self.item_spacing)
+        # Visible height is limited by window height
+        visible_height = min(self.menu_vyska, self.vyska_okna - self.vyska)
+        # Account for the 5px offset at the top
+        max_scroll = max(0, total_content_height + 5 - visible_height)
         
         scroll_amount = 40  # pixels to scroll per wheel event
         self.scroll_offset += direction * scroll_amount

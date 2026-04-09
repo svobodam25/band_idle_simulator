@@ -21,6 +21,8 @@ while running:
                 if lista.menu_rect.collidepoint(event.pos):
                     lista.menu_otevrene = not lista.menu_otevrene
                     lista.odrazu = 0
+                    if not lista.menu_otevrene:  # Reset scroll only when closing
+                        lista.scroll_offset = 0
                 # Check for buy button clicks
                 elif lista.menu_vyska > 0:
                     menu_y = lista.vyska + 5
