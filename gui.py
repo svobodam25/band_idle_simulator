@@ -17,12 +17,28 @@ class Lista():
         self.menu_gravitace = 0.005
         self.menu_rychlost = 0
         self.menu_rect = pygame.Rect(self.sirka - 90, 20, 70, 60)
+        
+        # Menu items
+        self.menu_items = ["Položka 1", "Položka 2", "Položka 3", "Položka 4", "Položka 5", "Položka 6", "Položka 7", "Položka 8"]
+        self.item_height = 70
+        self.item_spacing = 10
+        self.scroll_offset = 0
+        self.scrollbar_width = 10
+        self.item_color = (120, 70, 30)
+        
+        # Scrollbar properties
+        self.scrollbar_color = (100, 100, 100)
+        self.scrollbar_hover_color = (150, 150, 150)
+        self.scrollbar_dragging = False
 
 
     def update(self): 
-        #print(self.menu_vyska, self.menu_otevrene)
+        if not self.menu_otevrene and self.menu_vyska >= 600:
+            self.menu_vyska = 600
+        if self.menu_otevrene and self.menu_vyska <= 0:
+            self.menu_vyska = 0
+
         if 0 <=self.menu_vyska < self.menu_max_vyska and self.menu_otevrene:
-            print("Otevírám menu")
             self.menu_rychlost += self.menu_gravitace
             self.menu_vyska += self.menu_rychlost
             if self.menu_vyska > self.menu_max_vyska:
@@ -30,6 +46,8 @@ class Lista():
                 self.menu_vyska -= self.menu_rychlost
                 self.menu_rychlost = self.menu_rychlost * -0.5
                 self.menu_vyska += self.menu_rychlost
+                if self.odrazu >= 10:
+                    self.menu_vyska = self.menu_max_vyska
         elif 0 < self.menu_vyska <= self.menu_max_vyska and not self.menu_otevrene:
             self.menu_rychlost -= self.menu_gravitace
             self.menu_vyska += self.menu_rychlost
@@ -38,6 +56,8 @@ class Lista():
                 self.menu_vyska -= self.menu_rychlost
                 self.menu_rychlost = self.menu_rychlost * -0.5
                 self.menu_vyska += self.menu_rychlost
+                if self.odrazu >= 10:
+                    self.menu_vyska = 0
 
 
     def nakresli(self, okno):
@@ -60,4 +80,64 @@ class Lista():
         if self.menu_vyska > 0:
             tmava_hneda = (90, 50, 20)
             pygame.draw.rect(okno, tmava_hneda, (0, self.vyska, self.sirka, self.menu_vyska))
+            
+            # Draw menu items
+            menu_y = self.vyska + 5
+            for i, item in enumerate(self.menu_items):
+                item_y = menu_y + i * (self.item_height + self.item_spacing) - self.scroll_offset
+                
+                if self.vyska < item_y + self.item_height < self.vyska + self.menu_vyska:
+                    # Draw item background with rounded corners
+                    item_rect = pygame.Rect(5, item_y, self.sirka - self.scrollbar_width - 15, self.item_height)
+                    pygame.draw.rect(okno, self.item_color, item_rect, border_radius=10)
+                    
+                    # Draw centered text moved 50px to the left
+                    item_text = self.font.render(item, True, (255, 255, 255))
+                    text_rect = item_text.get_rect(center=(self.sirka // 2 - 55, item_y + self.item_height // 2))
+                    okno.blit(item_text, text_rect)
+            
+            # Draw scrollbar
+            self._draw_scrollbar(okno)
+    
+    def _draw_scrollbar(self, okno):
+        """Draw scrollbar on the right side of the menu"""
+        if self.menu_vyska <= 0:
+            return
+        
+        # Only draw scrollbar when menu is fully expanded
+        if self.menu_vyska < self.menu_max_vyska * 0.999:
+            return
+        
+        total_content_height = len(self.menu_items) * (self.item_height + self.item_spacing)
+        visible_height = self.menu_vyska
+        
+        if total_content_height <= visible_height:
+            return
+        
+        # Scrollbar track
+        scrollbar_x = self.sirka - self.scrollbar_width - 2
+        track_rect = pygame.Rect(scrollbar_x, self.vyska, self.scrollbar_width, self.menu_vyska)
+        pygame.draw.rect(okno, (50, 50, 50), track_rect)
+        
+        # Scrollbar handle
+        handle_height = max(20, (visible_height / total_content_height) * self.menu_vyska)
+        handle_y = self.vyska + (self.scroll_offset / total_content_height) * (self.menu_vyska - handle_height)
+        handle_rect = pygame.Rect(scrollbar_x, handle_y, self.scrollbar_width, handle_height)
+        
+        mouse_pos = pygame.mouse.get_pos()
+        color = self.scrollbar_hover_color if handle_rect.collidepoint(mouse_pos) else self.scrollbar_color
+        pygame.draw.rect(okno, color, handle_rect)
+    
+    def handle_scroll(self, direction):
+        """Handle scroll wheel or scrollbar interaction"""
+        if self.menu_vyska <= 0:
+            return
+        
+        total_content_height = len(self.menu_items) * (self.item_height + self.item_spacing)
+        visible_height = self.menu_vyska
+        max_scroll = max(0, total_content_height - visible_height)
+        
+        scroll_amount = 40  # pixels to scroll per wheel event
+        self.scroll_offset += direction * scroll_amount
+        self.scroll_offset = max(0, min(self.scroll_offset, max_scroll))
 

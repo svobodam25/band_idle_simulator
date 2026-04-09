@@ -20,6 +20,9 @@ while running:
             if lista.menu_rect.collidepoint(event.pos):
                 lista.menu_otevrene = not lista.menu_otevrene
                 lista.odrazu = 0
+        if event.type == pygame.MOUSEWHEEL:
+            if lista.menu_vyska > 0:
+                lista.handle_scroll(-event.y)
     screen.fill((255, 255, 255))
 
     lista.update()
