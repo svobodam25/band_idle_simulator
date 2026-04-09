@@ -56,6 +56,10 @@ class Lista():
         # Background
         self.background_image = pygame.image.load("obrazky/docasne_pozadi.png")
         self.background_image = pygame.transform.scale(self.background_image, (sirka, vyska))
+        
+        # Audience properties
+        self.audience_image = pygame.image.load("obrazky/docasny_publikum.png")
+        self.audience_image = pygame.transform.scale(self.audience_image, (218, 183))
 
         # Logo properties
         self.logo_image = pygame.image.load("obrazky/logo.png")
@@ -169,6 +173,11 @@ class Lista():
             
             # Draw scrollbar
             self._draw_scrollbar(okno)
+        
+        # Draw audience at the bottom (centered)
+        audience_y = self.vyska_okna - 163
+        audience_x = (self.sirka - 218) // 2
+        okno.blit(self.audience_image, (audience_x, audience_y))
         
         # Draw header bar on top (always on top)
         pygame.draw.rect(okno, self.barva, (0, 0, self.sirka, self.vyska))
