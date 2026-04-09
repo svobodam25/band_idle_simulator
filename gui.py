@@ -7,7 +7,7 @@ class Lista():
         self.barva = (139, 69, 19)
         self.sirka = sirka
         self.vyska = 100
-        self.penize = 0
+        self.penize = 2000
         self.font = pygame.font.SysFont(None, 60)
 
         self.menu_otevrene = False
@@ -20,6 +20,7 @@ class Lista():
         
         # Menu items
         self.menu_items = ["Položka 1", "Položka 2", "Položka 3", "Položka 4", "Položka 5", "Položka 6", "Položka 7", "Položka 8"]
+        self.item_prices = {0: 10, 1: 25, 2: 50, 3: 100, 4: 200, 5: 500, 6: 1000, 7: 2500}  # Price for each item
         self.item_height = 70
         self.item_spacing = 10
         self.scroll_offset = 0
@@ -33,10 +34,13 @@ class Lista():
         
         # Button properties
         self.button_color = (34, 139, 34)
+        self.button_disabled_color = (150, 150, 150)  # Gray color for disabled button
         self.button_height = 60
         self.button_width = 80
         self.button_font = pygame.font.SysFont(None, 30)
+        self.price_font = pygame.font.SysFont(None, 25)
         self.button_text = self.button_font.render("Koupit", True, (255, 255, 255))
+        self.button_text_disabled = self.button_font.render("Koupit", True, (100, 100, 100))
 
 
     def update(self): 
@@ -103,15 +107,28 @@ class Lista():
                     text_rect = item_text.get_rect(center=(self.sirka // 2 - 55, item_y + self.item_height // 2))
                     okno.blit(item_text, text_rect)
                     
-                    # Draw green buy button on the right
+                    # Check if player can afford this item
+                    price = self.item_prices.get(i, 0)
+                    can_afford = self.penize >= price
+                    
+                    # Draw price on the left side
+                    price_text = self.price_font.render(f"{price}$", True, (255, 255, 100))
+                    price_rect = price_text.get_rect(center=(40, item_y + self.item_height // 2))
+                    okno.blit(price_text, price_rect)
+                    
+                    # Draw buy button on the right (gray if can't afford)
                     button_x = self.sirka - self.scrollbar_width - self.button_width - 20
                     button_y = item_y + (self.item_height - self.button_height) // 2
                     button_rect = pygame.Rect(button_x, button_y, self.button_width, self.button_height)
-                    pygame.draw.rect(okno, self.button_color, button_rect, border_radius=8)
+                    
+                    button_color = self.button_color if can_afford else self.button_disabled_color
+                    button_text_render = self.button_text if can_afford else self.button_text_disabled
+                    
+                    pygame.draw.rect(okno, button_color, button_rect, border_radius=8)
                     
                     # Draw "Koupit" text on button
-                    button_text_rect = self.button_text.get_rect(center=button_rect.center)
-                    okno.blit(self.button_text, button_text_rect)
+                    button_text_rect = button_text_render.get_rect(center=button_rect.center)
+                    okno.blit(button_text_render, button_text_rect)
             
             # Draw scrollbar
             self._draw_scrollbar(okno)

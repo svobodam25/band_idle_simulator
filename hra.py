@@ -17,9 +17,24 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if lista.menu_rect.collidepoint(event.pos):
-                lista.menu_otevrene = not lista.menu_otevrene
-                lista.odrazu = 0
+            if event.button == 1:  # Only left mouse button
+                if lista.menu_rect.collidepoint(event.pos):
+                    lista.menu_otevrene = not lista.menu_otevrene
+                    lista.odrazu = 0
+                # Check for buy button clicks
+                elif lista.menu_vyska > 0:
+                    menu_y = lista.vyska + 5
+                    for i in range(len(lista.menu_items)):
+                        item_y = menu_y + i * (lista.item_height + lista.item_spacing) - lista.scroll_offset
+                        if lista.vyska < item_y + lista.item_height < lista.vyska + lista.menu_vyska:
+                            button_x = lista.sirka - lista.scrollbar_width - lista.button_width - 20
+                            button_y = item_y + (lista.item_height - lista.button_height) // 2
+                            button_rect = pygame.Rect(button_x, button_y, lista.button_width, lista.button_height)
+                            
+                            if button_rect.collidepoint(event.pos):
+                                price = lista.item_prices.get(i, 0)
+                                if lista.penize >= price:
+                                    lista.penize -= price
         if event.type == pygame.MOUSEWHEEL:
             if lista.menu_vyska > 0:
                 lista.handle_scroll(-event.y)
