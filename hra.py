@@ -12,6 +12,7 @@ pygame.display.set_caption("Band Idle Simulator")
 
 lista = gui.Lista(width, height)
 last_income_update = time.time()
+last_drum_hit = time.time()
 
 running = True
 while running:
@@ -72,6 +73,11 @@ while running:
     if current_time - last_income_update >= 1.0:
         lista.penize += lista.prijem
         last_income_update = current_time
+
+    # Drummer hit frequency (e.g. every 2.5 seconds)
+    if lista.drummer_active and current_time - last_drum_hit >= 2.5:
+        lista.zahraj_na_buben()
+        last_drum_hit = current_time
     
     lista.nakresli(okno=screen)
 

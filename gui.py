@@ -76,10 +76,24 @@ class Lista():
         self.drum_image = pygame.transform.scale(self.drum_image, (60, 60))  # Resize drum to 60x60
         self.drum_rect = self.drum_image.get_rect(center=(180, self.singer_y + 80))
         self.drummer_active = False  # Becomes True when purchased
-        self.drummer_timer = 0
-        self.drummer_duration = 600  # Not used anymore - drummer is permanent once purchased
+        
+        # Animace a zvuk bubnu
+        self.drum_scale = 1.0
+        self.drum_target_scale = 1.0
+        self.drum_animation_speed = 0.2
+        try:
+            pygame.mixer.init()
+            self.drum_sound = pygame.mixer.Sound("zvuky/buben.wav")
+        except:
+            self.drum_sound = None
 
         self.button_text_disabled = self.button_font.render("Koupit", True, (100, 100, 100))
+
+    def zahraj_na_buben(self):
+        """Spustí animaci a popř. zvuk úderu do bubnu."""
+        self.drum_target_scale = 1.3
+        if self.drum_sound:
+            self.drum_sound.play()
 
 
 
@@ -112,6 +126,14 @@ class Lista():
         
 
         # Drummer stays active permanently once purchased (no timer countdown)
+        if hasattr(self, 'drum_scale'):
+            if abs(self.drum_scale - self.drum_target_scale) > 0.01:
+                self.drum_scale += (self.drum_target_scale - self.drum_scale) * self.drum_animation_speed
+            else:
+                self.drum_scale = self.drum_target_scale
+                # Pokud buben dosáhl maximálního zvětšení, vrátí se zpět
+                if abs(self.drum_target_scale - 1.3) < 0.01 and abs(self.drum_scale - 1.3) < 0.01:
+                    self.drum_target_scale = 1.0
 
         # Update singer animation
         if abs(self.singer_scale - self.singer_target_scale) > 0.01:
@@ -150,9 +172,20 @@ class Lista():
         
         # Draw drummer and drum if active
         if self.drummer_active:
+            # Efekt poskoku pro bubeníka a zvětšení bubnu
+            scale = getattr(self, 'drum_scale', 1.0)
+            y_offset = (scale - 1.0) * -30  # Zvedne bubeníka, když se buben zvětší
+            
+            temp_drummer_rect = self.drummer_rect.copy()
+            temp_drummer_rect.y += int(y_offset)
 
-            okno.blit(self.drum_image, self.drum_rect)
-            okno.blit(self.drummer_image, self.drummer_rect)
+            scaled_w = int(self.drum_image.get_width() * scale)
+            scaled_h = int(self.drum_image.get_height() * scale)
+            scaled_drum = pygame.transform.smoothscale(self.drum_image, (scaled_w, scaled_h))
+            temp_drum_rect = scaled_drum.get_rect(center=self.drum_rect.center)
+
+            okno.blit(scaled_drum, temp_drum_rect)
+            okno.blit(self.drummer_image, temp_drummer_rect)
         
         # Draw menu (above singer)
         if self.menu_vyska > 0:
