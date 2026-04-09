@@ -47,6 +47,10 @@ class Lista():
         self.singer_y = 300
         self.singer_image = pygame.image.load("obrazky/docasny_zpevak.png")
         self.singer_rect = self.singer_image.get_rect(center=(self.singer_x, self.singer_y))
+        
+        # Background
+        self.background_image = pygame.image.load("obrazky/docasne_pozadi.png")
+        self.background_image = pygame.transform.scale(self.background_image, (sirka, vyska))
 
         self.button_text_disabled = self.button_font.render("Koupit", True, (100, 100, 100))
 
@@ -81,6 +85,9 @@ class Lista():
 
 
     def nakresli(self, okno):
+        # Draw background
+        okno.blit(self.background_image, (0, 0))
+        
         # Draw singer in the middle (background)
         self.singer_rect.center = (self.singer_x, self.singer_y)
         okno.blit(self.singer_image, self.singer_rect)
