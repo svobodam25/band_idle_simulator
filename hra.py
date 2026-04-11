@@ -247,32 +247,7 @@ while running:
                             lista.show_combo_text = not getattr(lista, 'show_combo_text', True)
 
                     elif getattr(lista, 'settings_tab', 'Sound') == 'Developer':
-                        if getattr(lista, 'rebirth_confirm_open', False):
-                            if hasattr(lista, 'btn_rebirth_confirm') and lista.btn_rebirth_confirm.collidepoint(ui_pos):
-                                if perform_rebirth(lista):
-                                    now = time.time()
-                                    last_income_update = now
-                                    last_drum_hit = now
-                                    last_guitar_strum = now
-                                    last_piano_play = now
-                                    last_dj_play = now
-                                    last_drum_tick = now
-                                    last_piano_tick = now
-                                    last_dj_tick = now
-                                    last_guitar_burst = now
-                                    if hasattr(lista, 'pridat_floating_text'):
-                                        mult = get_rebirth_multiplier(lista)
-                                        msg = txt(lista, "rebirth_done", "Rebirth! Mult x{mult}").format(mult=int(mult))
-                                        lista.pridat_floating_text(25, 130, msg, (255, 220, 120), life=1.6)
-                            elif hasattr(lista, 'btn_rebirth_cancel') and lista.btn_rebirth_cancel.collidepoint(ui_pos):
-                                lista.rebirth_confirm_open = False
-                        elif hasattr(lista, 'btn_rebirth') and lista.btn_rebirth.collidepoint(ui_pos):
-                            if can_rebirth(lista):
-                                lista.rebirth_confirm_open = True
-                            elif hasattr(lista, 'pridat_floating_text'):
-                                need = int(getattr(lista, 'rebirth_requirement', 1_000_000))
-                                msg = txt(lista, "rebirth_from", "Rebirth od {need}$").format(need=need)
-                                lista.pridat_floating_text(25, 130, msg, (255, 190, 190), life=1.2)
+                        pass
 
                     continue
 
@@ -315,13 +290,42 @@ while running:
                     lista.menu_rychlost = 0
                     if not lista.menu_otevrene:
                         lista.scroll_offset = 0
+                        lista.rebirth_confirm_open = False
                 elif lista.menu_vyska > 0:
+                    if getattr(lista, 'aktivni_kategorie', '') == "Rebirth" and getattr(lista, 'rebirth_confirm_open', False):
+                        if hasattr(lista, 'menu_btn_rebirth_confirm') and lista.menu_btn_rebirth_confirm.collidepoint(ui_pos):
+                            if perform_rebirth(lista):
+                                now = time.time()
+                                last_income_update = now
+                                last_drum_hit = now
+                                last_guitar_strum = now
+                                last_piano_play = now
+                                last_dj_play = now
+                                last_drum_tick = now
+                                last_piano_tick = now
+                                last_dj_tick = now
+                                last_guitar_burst = now
+                                if hasattr(lista, 'pridat_floating_text'):
+                                    mult = get_rebirth_multiplier(lista)
+                                    msg = txt(lista, "rebirth_done", "Rebirth! Mult x{mult}").format(mult=int(mult))
+                                    lista.pridat_floating_text(25, 130, msg, (255, 220, 120), life=1.6)
+                            continue
+                        if hasattr(lista, 'menu_btn_rebirth_cancel') and lista.menu_btn_rebirth_cancel.collidepoint(ui_pos):
+                            lista.rebirth_confirm_open = False
+                            continue
+
                     if hasattr(lista, 'rect_tab_clenove') and lista.rect_tab_clenove.collidepoint(ui_pos):
                         lista.aktivni_kategorie = "Členové"
                         lista.scroll_offset = 0
+                        lista.rebirth_confirm_open = False
                         continue
                     if hasattr(lista, 'rect_tab_vylepseni') and lista.rect_tab_vylepseni.collidepoint(ui_pos):
                         lista.aktivni_kategorie = "Vylepšení"
+                        lista.scroll_offset = 0
+                        lista.rebirth_confirm_open = False
+                        continue
+                    if hasattr(lista, 'rect_tab_rebirth') and lista.rect_tab_rebirth.collidepoint(ui_pos):
+                        lista.aktivni_kategorie = "Rebirth"
                         lista.scroll_offset = 0
                         continue
 
@@ -330,7 +334,7 @@ while running:
                     aktualni_polozky = lista.menu_items[lista.aktivni_kategorie]
                     
                     for i in range(len(aktualni_polozky)):
-                        if i in lista.bought_items[lista.aktivni_kategorie]:
+                        if i in lista.bought_items.get(lista.aktivni_kategorie, set()):
                             continue
                         
                         item_y = menu_obsah_y + visible_index * (lista.item_height + lista.item_spacing) - lista.scroll_offset
@@ -342,7 +346,17 @@ while running:
                             button_rect = pygame.Rect(button_x, button_y, lista.button_width, lista.button_height)
                             
                             if button_rect.collidepoint(ui_pos):
-                                price = lista.item_prices[lista.aktivni_kategorie].get(i, 0)
+                                price = lista.item_prices.get(lista.aktivni_kategorie, {}).get(i, 0)
+
+                                if lista.aktivni_kategorie == "Rebirth":
+                                    if can_rebirth(lista):
+                                        lista.rebirth_confirm_open = True
+                                    elif hasattr(lista, 'pridat_floating_text'):
+                                        need = int(getattr(lista, 'rebirth_requirement', 1_000_000))
+                                        msg = txt(lista, "rebirth_from", "Rebirth od {need}$").format(need=need)
+                                        lista.pridat_floating_text(25, 130, msg, (255, 190, 190), life=1.2)
+                                    continue
+
                                 if lista.penize >= price:
                                     lista.penize -= price
 

@@ -18,7 +18,7 @@ class Lista():
         self.sirka = sirka
         self.vyska_okna = vyska
         self.vyska = 100
-        self.penize = 0
+        self.penize = 10000000000000
         self.prijem = 0
         self.sila_kliku = 1
         self.kliknuti_historie = []
@@ -41,22 +41,25 @@ class Lista():
         self.menu_rychlost = 0
         self.menu_rect = pygame.Rect(self.sirka - 90, 20, 70, 60)
         
-        self.kategorie = ["Členové", "Vylepšení"]
+        self.kategorie = ["Členové", "Vylepšení", "Rebirth"]
         self.aktivni_kategorie = "Členové"
 
         self.menu_items = {
             "Členové": ["Mikrofon", "Bubeník", "Kytarista", "Pianista", "DJ", "Položka 6", "Položka 7"],
-            "Vylepšení": ["Zlaté hlasivky (+1 Klik)", "Lepší paličky (+2 $/s)", "Lepší trsátko (+5 $/s)", "Těžké basy (+8 $/s)", "Lepší mikrofon (+5 Klik)", "Lepší klávesy (+6 $/s)", "Lepší mix pult (+8 $/s)"]
+            "Vylepšení": ["Zlaté hlasivky (+1 Klik)", "Lepší paličky (+2 $/s)", "Lepší trsátko (+5 $/s)", "Těžké basy (+8 $/s)", "Lepší mikrofon (+5 Klik)", "Lepší klávesy (+6 $/s)", "Lepší mix pult (+8 $/s)"],
+            "Rebirth": ["Reset runu, trvale 2x prijem"]
         }
         self.menu_items_en = {
             "Členové": ["Microphone", "Drummer", "Guitarist", "Pianist", "DJ", "Item 6", "Item 7"],
-            "Vylepšení": ["Golden Vocal Cords (+1 Click)", "Better Drumsticks (+2 $/s)", "Better Pick (+5 $/s)", "Heavy Bass (+8 $/s)", "Better Microphone (+5 Click)", "Better Keys (+6 $/s)", "Better Mixer (+8 $/s)"]
+            "Vylepšení": ["Golden Vocal Cords (+1 Click)", "Better Drumsticks (+2 $/s)", "Better Pick (+5 $/s)", "Heavy Bass (+8 $/s)", "Better Microphone (+5 Click)", "Better Keys (+6 $/s)", "Better Mixer (+8 $/s)"],
+            "Rebirth": ["Reset run, permanent 2x income"]
         }
         self.item_prices = {
             "Členové": {0: 25, 1: 75, 2: 150, 3: 400, 4: 1000, 5: 3000, 6: 10000},
-            "Vylepšení": {0: 200, 1: 450, 2: 900, 3: 2000, 4: 5000, 5: 3500, 6: 8000}
+            "Vylepšení": {0: 200, 1: 450, 2: 900, 3: 2000, 4: 5000, 5: 3500, 6: 8000},
+            "Rebirth": {0: 1_000_000}
         }
-        self.bought_items = {"Členové": set(), "Vylepšení": set()}
+        self.bought_items = {"Členové": set(), "Vylepšení": set(), "Rebirth": set()}
         self.upgrade_tooltips = {
             0: "Silnejsi hlas: +1 klik.",
             1: "Bubenik boost: +2 $/s (jen kdyz je aktivni).",
@@ -173,10 +176,22 @@ class Lista():
         self.piano_scale = 1.0
         self.piano_target_scale = 1.0
         self.piano_animation_speed = 0.3
+        try:
+            self.piano_sound = pygame.mixer.Sound("zvuky/piano.wav")
+            self.piano_sound.set_volume(self.hlasitost ** 2)
+        except Exception as e:
+            print("Chyba při načítání piano.wav:", e)
+            self.piano_sound = None
 
         self.dj_scale = 1.0
         self.dj_target_scale = 1.0
         self.dj_animation_speed = 0.25
+        try:
+            self.dj_sound = pygame.mixer.Sound("zvuky/dj.wav")
+            self.dj_sound.set_volume(self.hlasitost ** 2)
+        except Exception as e:
+            print("Chyba při načítání dj.wav:", e)
+            self.dj_sound = None
 
         self.button_text_disabled = self.button_font.render("Koupit", True, (100, 100, 100))
 
@@ -357,8 +372,10 @@ class Lista():
         
         real_volume = self.hlasitost ** 2
         
-        if self.drum_sound: self.drum_sound.set_volume(real_volume)
+        if hasattr(self, 'drum_sound') and self.drum_sound: self.drum_sound.set_volume(real_volume)
         if hasattr(self, 'guitar_sound') and self.guitar_sound: self.guitar_sound.set_volume(real_volume)
+        if hasattr(self, 'piano_sound') and self.piano_sound: self.piano_sound.set_volume(real_volume)
+        if hasattr(self, 'dj_sound') and self.dj_sound: self.dj_sound.set_volume(real_volume)
         self.update_audio_layers()
 
     def pridat_floating_text(self, x, y, text, color=(255, 255, 255), life=1.0):
@@ -411,6 +428,7 @@ class Lista():
             "task": "Ukol",
             "cat_members": "Clenove",
             "cat_upgrades": "Vylepseni",
+            "cat_rebirth": "Rebirth",
             "animations": "Animace",
             "fps_lock": "FPS Lock",
             "fps_unlimited": "Bez limitu",
@@ -430,6 +448,7 @@ class Lista():
             "rebirth_from": "Rebirth od {need}$",
             "combo_label": "KOMBO",
             "rebirth_done": "Rebirth! Nasobic x{mult}",
+            "rebirth_ready": "Pripraveno",
         }
         en = {
             "settings": "Settings",
@@ -453,6 +472,7 @@ class Lista():
             "task": "Task",
             "cat_members": "Members",
             "cat_upgrades": "Upgrades",
+            "cat_rebirth": "Rebirth",
             "animations": "Animations",
             "fps_lock": "FPS Lock",
             "fps_unlimited": "Unlimited",
@@ -472,6 +492,7 @@ class Lista():
             "rebirth_from": "Rebirth from {need}$",
             "combo_label": "COMBO",
             "rebirth_done": "Rebirth! Mult x{mult}",
+            "rebirth_ready": "Ready",
         }
         table = en if getattr(self, 'language', 'CZ') == 'EN' else cs
         return table.get(key, key)
@@ -539,11 +560,12 @@ class Lista():
         self.pianist_active = False
         self.dj_active = False
 
-        self.bought_items = {"Členové": set(), "Vylepšení": set()}
+        self.bought_items = {"Členové": set(), "Vylepšení": set(), "Rebirth": set()}
         self.upgrade_levels = {i: 0 for i in range(7)}
         self.item_prices = {
             "Členové": {0: 25, 1: 75, 2: 150, 3: 400, 4: 1000, 5: 3000, 6: 10000},
-            "Vylepšení": {0: 200, 1: 450, 2: 900, 3: 2000, 4: 5000, 5: 3500, 6: 8000}
+            "Vylepšení": {0: 200, 1: 450, 2: 900, 3: 2000, 4: 5000, 5: 3500, 6: 8000},
+            "Rebirth": {0: 1_000_000}
         }
 
         for task in self.daily_tasks:
@@ -617,10 +639,12 @@ class Lista():
             "bought_items": {
                 "Členové": sorted(list(self.bought_items.get("Členové", set()))),
                 "Vylepšení": sorted(list(self.bought_items.get("Vylepšení", set()))),
+                "Rebirth": sorted(list(self.bought_items.get("Rebirth", set()))),
             },
             "item_prices": {
                 "Členové": dict(self.item_prices.get("Členové", {})),
                 "Vylepšení": dict(self.item_prices.get("Vylepšení", {})),
+                "Rebirth": dict(self.item_prices.get("Rebirth", {})),
             },
             "daily_tasks": [dict(task) for task in getattr(self, 'daily_tasks', [])],
         }
@@ -650,6 +674,7 @@ class Lista():
             self.bought_items = {
                 "Členové": set(bought.get("Členové", [])),
                 "Vylepšení": set(bought.get("Vylepšení", [])),
+                "Rebirth": set(bought.get("Rebirth", [])),
             }
 
         prices = data.get("item_prices", {})
@@ -657,6 +682,7 @@ class Lista():
             self.item_prices = {
                 "Členové": dict(prices.get("Členové", self.item_prices.get("Členové", {}))),
                 "Vylepšení": dict(prices.get("Vylepšení", self.item_prices.get("Vylepšení", {}))),
+                "Rebirth": dict(prices.get("Rebirth", self.item_prices.get("Rebirth", {}))),
             }
 
         tasks = data.get("daily_tasks", None)
@@ -678,7 +704,9 @@ class Lista():
     def zahraj_na_piano(self):
         """Spustí animaci pianisty."""
         self.piano_target_scale = 1.3
-        if self.guitar_sound:
+        if hasattr(self, 'piano_sound') and self.piano_sound:
+            self.piano_sound.play()
+        elif self.guitar_sound:
             ch = pygame.mixer.find_channel(True)
             if ch:
                 ch.set_volume((self.hlasitost ** 2) * 0.22)
@@ -687,7 +715,9 @@ class Lista():
     def zahraj_dj_set(self):
         """Spustí animaci DJ."""
         self.dj_target_scale = 1.3
-        if self.drum_sound:
+        if hasattr(self, 'dj_sound') and self.dj_sound:
+            self.dj_sound.play()
+        elif self.drum_sound:
             ch = pygame.mixer.find_channel(True)
             if ch:
                 ch.set_volume((self.hlasitost ** 2) * 0.18)
@@ -889,23 +919,26 @@ class Lista():
             tmava_hneda = (90, 50, 20)
             pygame.draw.rect(okno, tmava_hneda, (0, self.vyska, self.sirka, self.menu_vyska))
             
-            tab_width = (self.sirka - 40) // 2
+            tab_width = (self.sirka - 50) // 3
             tab_y = self.vyska + 5
             
             self.rect_tab_clenove = pygame.Rect(20, tab_y, tab_width, 40)
-            self.rect_tab_vylepseni = pygame.Rect(20 + tab_width, tab_y, tab_width, 40)
+            self.rect_tab_vylepseni = pygame.Rect(25 + tab_width, tab_y, tab_width, 40)
+            self.rect_tab_rebirth = pygame.Rect(30 + (tab_width * 2), tab_y, tab_width, 40)
             
             pygame.draw.rect(okno, (100, 100, 100) if self.aktivni_kategorie != "Členové" else (150, 80, 40), self.rect_tab_clenove)
             pygame.draw.rect(okno, (100, 100, 100) if self.aktivni_kategorie != "Vylepšení" else (150, 80, 40), self.rect_tab_vylepseni)
+            pygame.draw.rect(okno, (100, 100, 100) if self.aktivni_kategorie != "Rebirth" else (150, 80, 40), self.rect_tab_rebirth)
 
             okno.blit(self.button_font.render(self._txt("cat_members"), True, (255, 255, 255)), (self.rect_tab_clenove.x + 20, tab_y + 10))
             okno.blit(self.button_font.render(self._txt("cat_upgrades"), True, (255, 255, 255)), (self.rect_tab_vylepseni.x + 20, tab_y + 10))
+            okno.blit(self.button_font.render(self._txt("cat_rebirth"), True, (255, 255, 255)), (self.rect_tab_rebirth.x + 20, tab_y + 10))
             
             menu_y = self.vyska + 55
             visible_index = 0
             aktualni_polozky = self.menu_items[self.aktivni_kategorie]
             for i in range(len(aktualni_polozky)):
-                if i in self.bought_items[self.aktivni_kategorie]:
+                if i in self.bought_items.get(self.aktivni_kategorie, set()):
                     continue
                 
                 item = self.get_menu_item_name(self.aktivni_kategorie, i)
@@ -924,10 +957,16 @@ class Lista():
                         text_rect = item_text.get_rect(center=(self.sirka // 2 - 55, item_y + self.item_height // 2))
                         okno.blit(item_text, text_rect)
                         
-                        price = self.item_prices[self.aktivni_kategorie].get(i, 0)
+                        price = self.item_prices.get(self.aktivni_kategorie, {}).get(i, 0)
                         can_afford = self.penize >= price
                         
-                        price_text = self.price_font.render(f"{price}$", True, (255, 255, 100))
+                        if self.aktivni_kategorie == "Rebirth":
+                            price_label = self._txt("rebirth_ready") if can_afford else f"{self.format_number(price)}$"
+                            price_color = (120, 255, 160) if can_afford else (255, 210, 130)
+                        else:
+                            price_label = f"{price}$"
+                            price_color = (255, 255, 100)
+                        price_text = self.price_font.render(price_label, True, price_color)
                         price_rect = price_text.get_rect(center=(40, item_y + self.item_height // 2))
                         okno.blit(price_text, price_rect)
                         
@@ -936,7 +975,7 @@ class Lista():
                         button_rect = pygame.Rect(button_x, button_y, self.button_width, self.button_height)
                         
                         button_color = self.button_color if can_afford else self.button_disabled_color
-                        buy_label = self._txt("buy")
+                        buy_label = self._txt("rebirth") if self.aktivni_kategorie == "Rebirth" else self._txt("buy")
                         button_text_render = self.button_font.render(buy_label, True, (255, 255, 255) if can_afford else (100, 100, 100))
                         
                         pygame.draw.rect(okno, button_color, button_rect, border_radius=8)
@@ -949,6 +988,26 @@ class Lista():
                 tooltip = self.get_upgrade_tooltip(hovered_upgrade_index)
                 if tooltip:
                     self._draw_tooltip(okno, tooltip, int(mouse_ui_pos[0]), int(mouse_ui_pos[1]))
+
+            if self.aktivni_kategorie == "Rebirth" and getattr(self, 'rebirth_confirm_open', False):
+                cbox = pygame.Rect(self.sirka // 2 - 180, self.vyska + 135, 360, 110)
+                pygame.draw.rect(okno, (245, 245, 245), cbox, border_radius=10)
+                pygame.draw.rect(okno, (0, 0, 0), cbox, 2, border_radius=10)
+                ctext = self.res_font.render(self._txt("rebirth_confirm"), True, (20, 20, 20))
+                okno.blit(ctext, ctext.get_rect(center=(cbox.centerx, cbox.y + 30)))
+
+                self.menu_btn_rebirth_confirm = pygame.Rect(cbox.x + 22, cbox.bottom - 45, 150, 34)
+                self.menu_btn_rebirth_cancel = pygame.Rect(cbox.right - 172, cbox.bottom - 45, 150, 34)
+
+                pygame.draw.rect(okno, (100, 220, 130), self.menu_btn_rebirth_confirm, border_radius=8)
+                pygame.draw.rect(okno, (0, 0, 0), self.menu_btn_rebirth_confirm, 2, border_radius=8)
+                conf_txt = self.task_font.render(self._txt("confirm"), True, (0, 0, 0))
+                okno.blit(conf_txt, conf_txt.get_rect(center=self.menu_btn_rebirth_confirm.center))
+
+                pygame.draw.rect(okno, (240, 140, 140), self.menu_btn_rebirth_cancel, border_radius=8)
+                pygame.draw.rect(okno, (0, 0, 0), self.menu_btn_rebirth_cancel, 2, border_radius=8)
+                cancel_txt = self.task_font.render(self._txt("cancel"), True, (0, 0, 0))
+                okno.blit(cancel_txt, cancel_txt.get_rect(center=self.menu_btn_rebirth_cancel.center))
         
         if not self.menu_otevrene:
             t = time.time()
@@ -1128,41 +1187,6 @@ class Lista():
                 for idx, dev in enumerate(devs):
                     txt = dev_font.render(dev, True, (80, 80, 80))
                     okno.blit(txt, txt.get_rect(center=(self.settings_rect.centerx, self.settings_rect.y + 200 + (idx * 44))))
-
-                rebirth_count = int(getattr(self, 'rebirth_count', 0))
-                rebirth_mult = self.get_rebirth_multiplier()
-                line1 = self.res_font.render(f"{self._txt('rebirth')} x{rebirth_count}", True, (25, 25, 25))
-                line2 = self.res_font.render(f"{self._txt('income_mult')} x{rebirth_mult:.0f}", True, (25, 25, 25))
-                okno.blit(line1, (self.settings_rect.x + 30, self.settings_rect.y + 332))
-                okno.blit(line2, (self.settings_rect.x + 30, self.settings_rect.y + 364))
-
-                can = self.can_rebirth()
-                btn_color = (100, 210, 130) if can else (145, 145, 145)
-                pygame.draw.rect(okno, btn_color, self.btn_rebirth, border_radius=8)
-                pygame.draw.rect(okno, (0, 0, 0), self.btn_rebirth, 2, border_radius=8)
-                next_txt = self.res_font.render(self._txt("next_rebirth"), True, (0, 0, 0))
-                okno.blit(next_txt, next_txt.get_rect(center=self.btn_rebirth.center))
-                if not can:
-                    need_txt = self.task_font.render(self._txt("rebirth_need"), True, (90, 20, 20))
-                    need_rect = need_txt.get_rect(center=(self.btn_rebirth.centerx, self.btn_rebirth.bottom + 16))
-                    okno.blit(need_txt, need_rect)
-
-                if getattr(self, 'rebirth_confirm_open', False):
-                    cbox = pygame.Rect(self.settings_rect.centerx - 180, self.settings_rect.y + 448, 360, 95)
-                    pygame.draw.rect(okno, (245, 245, 245), cbox, border_radius=10)
-                    pygame.draw.rect(okno, (0, 0, 0), cbox, 2, border_radius=10)
-                    ctext = self.res_font.render(self._txt("rebirth_confirm"), True, (20, 20, 20))
-                    okno.blit(ctext, ctext.get_rect(center=(cbox.centerx, cbox.y + 26)))
-
-                    pygame.draw.rect(okno, (100, 220, 130), self.btn_rebirth_confirm, border_radius=8)
-                    pygame.draw.rect(okno, (0, 0, 0), self.btn_rebirth_confirm, 2, border_radius=8)
-                    conf_txt = self.res_font.render(self._txt("confirm"), True, (0, 0, 0))
-                    okno.blit(conf_txt, conf_txt.get_rect(center=self.btn_rebirth_confirm.center))
-
-                    pygame.draw.rect(okno, (240, 140, 140), self.btn_rebirth_cancel, border_radius=8)
-                    pygame.draw.rect(okno, (0, 0, 0), self.btn_rebirth_cancel, 2, border_radius=8)
-                    cancel_txt = self.res_font.render(self._txt("cancel"), True, (0, 0, 0))
-                    okno.blit(cancel_txt, cancel_txt.get_rect(center=self.btn_rebirth_cancel.center))
 
             # Close Button
             pygame.draw.rect(okno, (255, 100, 100), self.btn_exit_game, border_radius=10)
