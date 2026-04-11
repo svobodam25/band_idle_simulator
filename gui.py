@@ -18,7 +18,7 @@ class Lista():
         self.sirka = sirka
         self.vyska_okna = vyska
         self.vyska = 100
-        self.penize = 0
+        self.penize = 1000000
         self.prijem = 0
         self.sila_kliku = 1
         self.kliknuti_historie = []
@@ -36,14 +36,23 @@ class Lista():
         self.aktivni_kategorie = "Členové"
 
         self.menu_items = {
-            "Členové": ["Mikrofon", "Bubeník", "Kytarista", "Položka 4", "Položka 5", "Položka 6", "Položka 7"],
-            "Vylepšení": ["Zlaté hlasivky (+1 Klik)", "Lepší paličky (+2 $/s)", "Lepší trsátko (+5 $/s)", "Těžké basy (+8 $/s)", "Lepší mikrofon (+5 Klik)"]
+            "Členové": ["Mikrofon", "Bubeník", "Kytarista", "Pianista", "DJ", "Položka 6", "Položka 7"],
+            "Vylepšení": ["Zlaté hlasivky (+1 Klik)", "Lepší paličky (+2 $/s)", "Lepší trsátko (+5 $/s)", "Těžké basy (+8 $/s)", "Lepší mikrofon (+5 Klik)", "Lepší klávesy (+6 $/s)", "Lepší mix pult (+8 $/s)"]
         }
         self.item_prices = {
             "Členové": {0: 25, 1: 75, 2: 150, 3: 400, 4: 1000, 5: 3000, 6: 10000},
-            "Vylepšení": {0: 200, 1: 450, 2: 900, 3: 2000, 4: 5000}
+            "Vylepšení": {0: 200, 1: 450, 2: 900, 3: 2000, 4: 5000, 5: 3500, 6: 8000}
         }
         self.bought_items = {"Členové": set(), "Vylepšení": set()}
+        self.upgrade_tooltips = {
+            0: "Silnejsi hlas: +1 klik.",
+            1: "Bubenik boost: +2 $/s (jen kdyz je aktivni).",
+            2: "Kytara boost: +5 $/s (jen kdyz je aktivni).",
+            3: "Bass boost: +8 $/s.",
+            4: "Silnejsi mikrofon: +5 klik.",
+            5: "Piano boost: +6 $/s (jen kdyz je aktivni).",
+            6: "DJ boost: +8 $/s (jen kdyz je aktivni)."
+        }
         
         self.item_height = 70
         self.item_spacing = 10
@@ -61,6 +70,9 @@ class Lista():
         self.button_width = 80
         self.button_font = pygame.font.SysFont(None, 30)
         self.price_font = pygame.font.SysFont(None, 25)
+        self.tooltip_font = pygame.font.SysFont(None, 24)
+        self.floating_font = pygame.font.SysFont(None, 28)
+        self.combo_font = pygame.font.SysFont(None, 40)
         self.button_text = self.button_font.render("Koupit", True, (255, 255, 255))
 
         self.singer_x = sirka // 2
@@ -94,6 +106,16 @@ class Lista():
         self.guitarist_rect = self.guitarist_image.get_rect(center=(self.sirka - (self.sirka // 4), self.singer_y - 30))
         self.guitarist_active = False
 
+        self.pianist_image = pygame.image.load("obrazky/pianista.png")
+        self.pianist_image = pygame.transform.scale(self.pianist_image, (200, 200))
+        self.pianist_rect = self.pianist_image.get_rect(center=(self.sirka // 6, self.singer_y - 30))
+        self.pianist_active = False
+
+        self.dj_image = pygame.image.load("obrazky/DJ.png")
+        self.dj_image = pygame.transform.scale(self.dj_image, (200, 200))
+        self.dj_rect = self.dj_image.get_rect(center=(self.sirka - (self.sirka // 6), self.singer_y - 30))
+        self.dj_active = False
+
         self.mikrofon_active = False
         try:
             self.mikrofon_image = pygame.image.load("obrazky/mikrofon.png")
@@ -126,6 +148,14 @@ class Lista():
             print("Chyba při načítání buben.wav:", e)
             self.drum_sound = None
 
+        self.piano_scale = 1.0
+        self.piano_target_scale = 1.0
+        self.piano_animation_speed = 0.3
+
+        self.dj_scale = 1.0
+        self.dj_target_scale = 1.0
+        self.dj_animation_speed = 0.25
+
         self.button_text_disabled = self.button_font.render("Koupit", True, (100, 100, 100))
 
         self.settings_otevrene = False
@@ -137,6 +167,12 @@ class Lista():
         
         self.btn_res_change = pygame.Rect(self.sirka // 2 - 100, self.vyska_okna // 2 + 10, 200, 40)
         self.prepnut_rozliseni_v_hlavnim = False
+
+        self.floating_texts = []
+        self.combo_count = 0
+        self.combo_until = 0.0
+        self.combo_clicks = 0
+        self.combo_multiplier = 1.0
         
         self._aktualizovat_rozmery_okna(sirka, vyska)
 
@@ -193,10 +229,23 @@ class Lista():
         self.singer_y = (self.vyska_okna // 2) + 100 if self.vyska_okna > 600 else self.vyska_okna // 2
         self.singer_rect = self.singer_image.get_rect(center=(self.singer_x, self.singer_y))
 
-        self.drummer_rect = self.drummer_image.get_rect(center=(self.sirka // 4, self.singer_y - 30))
-        self.drum_rect = self.drum_image.get_rect(center=(self.sirka // 4, self.singer_y + 80))
+        if self.vyska_okna <= 600:
+            drummer_x = int(self.sirka * 0.30)
+            guitarist_x = int(self.sirka * 0.70)
+            pianist_x = int(self.sirka * 0.14)
+            dj_x = int(self.sirka * 0.86)
+        else:
+            drummer_x = self.sirka // 4
+            guitarist_x = self.sirka - (self.sirka // 4)
+            pianist_x = self.sirka // 6
+            dj_x = self.sirka - (self.sirka // 6)
 
-        self.guitarist_rect = self.guitarist_image.get_rect(center=(self.sirka - (self.sirka // 4), self.singer_y - 30))
+        self.drummer_rect = self.drummer_image.get_rect(center=(drummer_x, self.singer_y - 30))
+        self.drum_rect = self.drum_image.get_rect(center=(drummer_x, self.singer_y + 80))
+
+        self.guitarist_rect = self.guitarist_image.get_rect(center=(guitarist_x, self.singer_y - 30))
+        self.pianist_rect = self.pianist_image.get_rect(center=(pianist_x, self.singer_y - 30))
+        self.dj_rect = self.dj_image.get_rect(center=(dj_x, self.singer_y - 30))
 
         if hasattr(self, 'mikrofon_image'):
             self.mikrofon_rect = self.mikrofon_image.get_rect(center=(self.singer_x - 40, self.singer_y + 70))
@@ -226,6 +275,34 @@ class Lista():
         
         if self.drum_sound: self.drum_sound.set_volume(real_volume)
         if hasattr(self, 'guitar_sound') and self.guitar_sound: self.guitar_sound.set_volume(real_volume)
+        self.update_audio_layers()
+
+    def pridat_floating_text(self, x, y, text, color=(255, 255, 255), life=1.0):
+        self.floating_texts.append({
+            "x": float(x),
+            "y": float(y),
+            "text": str(text),
+            "color": color,
+            "born": time.time(),
+            "life": max(0.1, float(life))
+        })
+
+    def update_audio_layers(self):
+        active_count = sum([
+            1 if self.drummer_active else 0,
+            1 if self.guitarist_active else 0,
+            1 if self.pianist_active else 0,
+            1 if self.dj_active else 0,
+        ])
+        mix = active_count / 4.0
+        real_volume = self.hlasitost ** 2
+
+        if self.drum_sound:
+            base = 0.08 + (0.27 if self.drummer_active else 0.0)
+            self.drum_sound.set_volume(real_volume * base * (0.75 + 0.5 * mix))
+        if self.guitar_sound:
+            base = 0.08 + (0.30 if self.guitarist_active else 0.0)
+            self.guitar_sound.set_volume(real_volume * base * (0.75 + 0.5 * mix))
 
     def zahraj_na_buben(self):
         """Spustí animaci a popř. zvuk úderu do bubnu."""
@@ -239,7 +316,33 @@ class Lista():
         if self.guitar_sound:
             self.guitar_sound.play()
 
+    def zahraj_na_piano(self):
+        """Spustí animaci pianisty."""
+        self.piano_target_scale = 1.3
+        if self.guitar_sound:
+            ch = pygame.mixer.find_channel(True)
+            if ch:
+                ch.set_volume((self.hlasitost ** 2) * 0.22)
+                ch.play(self.guitar_sound)
+
+    def zahraj_dj_set(self):
+        """Spustí animaci DJ."""
+        self.dj_target_scale = 1.3
+        if self.drum_sound:
+            ch = pygame.mixer.find_channel(True)
+            if ch:
+                ch.set_volume((self.hlasitost ** 2) * 0.18)
+                ch.play(self.drum_sound)
+
     def update(self): 
+        self.update_audio_layers()
+
+        now = time.time()
+        self.floating_texts = [
+            t for t in self.floating_texts
+            if (now - t["born"]) <= t["life"]
+        ]
+
         if not self.menu_otevrene and self.menu_vyska >= 600:
             self.menu_vyska = 600
         if self.menu_otevrene and self.menu_vyska <= 0:
@@ -269,6 +372,10 @@ class Lista():
             self.drum_target_scale = 1.0
             self.guitar_scale = 1.0
             self.guitar_target_scale = 1.0
+            self.piano_scale = 1.0
+            self.piano_target_scale = 1.0
+            self.dj_scale = 1.0
+            self.dj_target_scale = 1.0
             self.singer_scale = 1.0
             self.singer_target_scale = 1.0
             return
@@ -289,6 +396,22 @@ class Lista():
                 self.guitar_scale = self.guitar_target_scale
                 if abs(self.guitar_target_scale - 1.3) < 0.01 and abs(self.guitar_scale - 1.3) < 0.01:
                     self.guitar_target_scale = 1.0
+
+        if hasattr(self, 'piano_scale'):
+            if abs(self.piano_scale - self.piano_target_scale) > 0.01:
+                self.piano_scale += (self.piano_target_scale - self.piano_scale) * self.piano_animation_speed
+            else:
+                self.piano_scale = self.piano_target_scale
+                if abs(self.piano_target_scale - 1.3) < 0.01 and abs(self.piano_scale - 1.3) < 0.01:
+                    self.piano_target_scale = 1.0
+
+        if hasattr(self, 'dj_scale'):
+            if abs(self.dj_scale - self.dj_target_scale) > 0.01:
+                self.dj_scale += (self.dj_target_scale - self.dj_scale) * self.dj_animation_speed
+            else:
+                self.dj_scale = self.dj_target_scale
+                if abs(self.dj_target_scale - 1.3) < 0.01 and abs(self.dj_scale - 1.3) < 0.01:
+                    self.dj_target_scale = 1.0
 
         if abs(self.singer_scale - self.singer_target_scale) > 0.01:
             self.singer_scale += (self.singer_target_scale - self.singer_scale) * self.singer_animation_speed
@@ -354,6 +477,34 @@ class Lista():
             temp_guitarist_rect = scaled_guitarist.get_rect(center=temp_guitarist_rect.center)
             okno.blit(scaled_guitarist, temp_guitarist_rect)
 
+        if self.pianist_active:
+            scale = getattr(self, 'piano_scale', 1.0)
+            y_offset = (scale - 1.0) * -30
+
+            temp_pianist_rect = self.pianist_rect.copy()
+            temp_pianist_rect.y += int(y_offset)
+
+            scaled_w = int(self.pianist_image.get_width() * scale)
+            scaled_h = int(self.pianist_image.get_height() * scale)
+            scaled_pianist = pygame.transform.smoothscale(self.pianist_image, (scaled_w, scaled_h))
+
+            temp_pianist_rect = scaled_pianist.get_rect(center=temp_pianist_rect.center)
+            okno.blit(scaled_pianist, temp_pianist_rect)
+
+        if self.dj_active:
+            scale = getattr(self, 'dj_scale', 1.0)
+            y_offset = (scale - 1.0) * -30
+
+            temp_dj_rect = self.dj_rect.copy()
+            temp_dj_rect.y += int(y_offset)
+
+            scaled_w = int(self.dj_image.get_width() * scale)
+            scaled_h = int(self.dj_image.get_height() * scale)
+            scaled_dj = pygame.transform.smoothscale(self.dj_image, (scaled_w, scaled_h))
+
+            temp_dj_rect = scaled_dj.get_rect(center=temp_dj_rect.center)
+            okno.blit(scaled_dj, temp_dj_rect)
+
         ui_layer = pygame.Surface((self.sirka, self.vyska_okna), pygame.SRCALPHA)
         self._draw_ui_layer(ui_layer)
 
@@ -369,6 +520,8 @@ class Lista():
             okno.blit(scaled_ui, (offset_x, offset_y))
 
     def _draw_ui_layer(self, okno):
+        mouse_ui_pos = self.screen_to_ui_pos(pygame.mouse.get_pos())
+        hovered_upgrade_index = None
 
         if self.menu_vyska > 0:
             tmava_hneda = (90, 50, 20)
@@ -400,6 +553,9 @@ class Lista():
                 if self.vyska < item_y + self.item_height < self.vyska + self.menu_vyska:
                     item_rect = pygame.Rect(5, item_y, self.sirka - self.scrollbar_width - 15, self.item_height)
                     if item_rect.bottom <= self.vyska_okna:
+                        if self.aktivni_kategorie == "Vylepšení" and item_rect.collidepoint(mouse_ui_pos):
+                            hovered_upgrade_index = i
+
                         pygame.draw.rect(okno, self.item_color, item_rect, border_radius=10)
                         
                         item_text = self.button_font.render(item, True, (255, 255, 255))
@@ -426,6 +582,10 @@ class Lista():
                         okno.blit(button_text_render, button_text_rect)
             
             self._draw_scrollbar(okno)
+            if hovered_upgrade_index is not None:
+                tooltip = self.upgrade_tooltips.get(hovered_upgrade_index, "")
+                if tooltip:
+                    self._draw_tooltip(okno, tooltip, int(mouse_ui_pos[0]), int(mouse_ui_pos[1]))
         
         if not self.menu_otevrene:
             t = time.time()
@@ -483,6 +643,14 @@ class Lista():
         pygame.draw.line(okno, line_color, (x_start, 35), (x_end, 35), line_width)
         pygame.draw.line(okno, line_color, (x_start, 50), (x_end, 50), line_width)
         pygame.draw.line(okno, line_color, (x_start, 65), (x_end, 65), line_width)
+
+        if time.time() < getattr(self, 'combo_until', 0.0):
+            combo_mul = float(getattr(self, 'combo_multiplier', 1.0))
+            combo_text = self.combo_font.render(f"COMBO x{combo_mul:.1f}", True, (255, 220, 80))
+            combo_rect = combo_text.get_rect(center=(self.singer_x, max(120, self.singer_y - 170)))
+            okno.blit(combo_text, combo_rect)
+
+        self._draw_floating_texts(okno)
 
         if self.settings_otevrene:
             overlay = pygame.Surface((self.sirka, self.vyska_okna))
@@ -581,6 +749,32 @@ class Lista():
             pygame.draw.rect(okno, (0, 0, 0), self.btn_zavrit_nastaveni, 2, border_radius=5)
             zavrit_text = self.settings_font.render("X", True, (255, 255, 255))
             okno.blit(zavrit_text, zavrit_text.get_rect(center=self.btn_zavrit_nastaveni.center))
+
+    def _draw_tooltip(self, okno, text, x, y):
+        render = self.tooltip_font.render(text, True, (255, 255, 255))
+        pad = 8
+        rect = render.get_rect()
+        rect.x = min(max(10, x + 14), self.sirka - rect.width - (pad * 2) - 10)
+        rect.y = min(max(self.vyska + 10, y + 14), self.vyska_okna - rect.height - (pad * 2) - 10)
+        bg = pygame.Rect(rect.x - pad, rect.y - pad, rect.width + (pad * 2), rect.height + (pad * 2))
+        pygame.draw.rect(okno, (20, 20, 20), bg, border_radius=8)
+        pygame.draw.rect(okno, (255, 255, 255), bg, 1, border_radius=8)
+        okno.blit(render, rect)
+
+    def _draw_floating_texts(self, okno):
+        now = time.time()
+        for entry in self.floating_texts:
+            age = now - entry["born"]
+            life = entry["life"]
+            progress = max(0.0, min(1.0, age / life))
+            alpha = int(255 * (1.0 - progress))
+
+            text_surface = self.floating_font.render(entry["text"], True, entry["color"])
+            text_surface.set_alpha(alpha)
+
+            y_offset = int(34 * progress)
+            pos = (int(entry["x"]), int(entry["y"] - y_offset))
+            okno.blit(text_surface, pos)
     
     def _draw_scrollbar(self, okno):
         """Draw scrollbar on the right side of the menu"""
