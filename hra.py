@@ -13,25 +13,141 @@ pygame.display.set_caption("Band Idle Simulator")
 lista = gui.Lista(width, height)
 if not hasattr(lista, 'upgrade_levels'):
     lista.upgrade_levels = {i: 0 for i in range(7)}
+if not hasattr(lista, 'daily_tasks'):
+    lista.daily_tasks = []
+
+
+def can_rebirth(l):
+    requirement = int(getattr(l, 'rebirth_requirement', 1_000_000))
+    return int(getattr(l, 'penize', 0)) >= requirement
+
+
+def get_rebirth_multiplier(l):
+    return float(2 ** int(getattr(l, 'rebirth_count', 0)))
+
+
+def perform_rebirth(l):
+    if not can_rebirth(l):
+        return False
+    if hasattr(l, 'perform_rebirth'):
+        l.perform_rebirth()
+    else:
+        l.rebirth_count = int(getattr(l, 'rebirth_count', 0)) + 1
+    return True
+
+
+def pridat_penize(l, amount):
+    gain = int(amount)
+    if gain <= 0:
+        return
+    l.penize += gain
+    if hasattr(l, 'statistics') and isinstance(l.statistics, dict):
+        l.statistics['total_earned'] = int(l.statistics.get('total_earned', 0)) + gain
+
+
+def txt(l, key, fallback):
+    if hasattr(l, '_txt'):
+        return l._txt(key)
+    return fallback
+
+
+def aktualizovat_ukol(l, task_id, value=None, add=0):
+    for task in getattr(l, 'daily_tasks', []):
+        if task.get("id") != task_id:
+            continue
+        if value is not None:
+            task["current"] = max(int(task.get("current", 0)), int(value))
+        if add:
+            task["current"] = int(task.get("current", 0)) + int(add)
+        if int(task.get("current", 0)) >= int(task.get("target", 1)):
+            task["completed"] = True
+        return
+
+
+def zpracovat_odmeny(l):
+    for task in getattr(l, 'daily_tasks', []):
+        if not task.get("completed", False) or task.get("claimed", False):
+            continue
+
+        rtype = task.get("reward_type")
+        rval = task.get("reward_value")
+
+        if rtype == "money":
+            amount = int(rval)
+            l.penize += amount
+            if hasattr(l, 'pridat_floating_text'):
+                msg = txt(l, "task_reward_money", "Ukol odmena +{amount}$").format(amount=amount)
+                l.pridat_floating_text(25, 130, msg, (140, 255, 140), life=1.5)
+        elif rtype == "buff":
+            l.task_income_buff = float(getattr(l, 'task_income_buff', 1.0)) * (1.0 + float(rval))
+            if hasattr(l, 'pridat_floating_text'):
+                pct = int(round(float(rval) * 100))
+                msg = txt(l, "task_reward_buff", "Ukol buff +{pct}%").format(pct=pct)
+                l.pridat_floating_text(25, 130, msg, (140, 220, 255), life=1.5)
+        elif rtype == "cosmetic":
+            unlocked = getattr(l, 'cosmetics_unlocked', set())
+            unlocked.add(str(rval))
+            l.cosmetics_unlocked = unlocked
+            if hasattr(l, 'pridat_floating_text'):
+                l.pridat_floating_text(25, 130, txt(l, "task_reward_cosmetic", "Nova kosmetika odemcena"), (255, 220, 140), life=1.5)
+
+        task["claimed"] = True
+
+
+def vyzvednout_odmenu_ukolu(l, task_id):
+    for task in getattr(l, 'daily_tasks', []):
+        if task.get("id") != task_id:
+            continue
+        if not task.get("completed", False) or task.get("claimed", False):
+            return False
+
+        rtype = task.get("reward_type")
+        rval = task.get("reward_value")
+
+        if rtype == "money":
+            amount = int(rval)
+            l.penize += amount
+            if hasattr(l, 'pridat_floating_text'):
+                msg = txt(l, "task_reward_money", "Ukol odmena +{amount}$").format(amount=amount)
+                l.pridat_floating_text(25, 130, msg, (140, 255, 140), life=1.5)
+        elif rtype == "buff":
+            l.task_income_buff = float(getattr(l, 'task_income_buff', 1.0)) * (1.0 + float(rval))
+            if hasattr(l, 'pridat_floating_text'):
+                pct = int(round(float(rval) * 100))
+                msg = txt(l, "task_reward_buff", "Ukol buff +{pct}%").format(pct=pct)
+                l.pridat_floating_text(25, 130, msg, (140, 220, 255), life=1.5)
+        elif rtype == "cosmetic":
+            unlocked = getattr(l, 'cosmetics_unlocked', set())
+            unlocked.add(str(rval))
+            l.cosmetics_unlocked = unlocked
+            if hasattr(l, 'pridat_floating_text'):
+                l.pridat_floating_text(25, 130, txt(l, "task_reward_cosmetic", "Nova kosmetika odemcena"), (255, 220, 140), life=1.5)
+
+        task["claimed"] = True
+        return True
+
+    return False
 
 
 def vypocitat_vydelky(l):
     levels = getattr(l, 'upgrade_levels', {i: 0 for i in range(7)})
+    rebirth_mult = get_rebirth_multiplier(l)
 
     global_mult = 1.0 + (levels.get(3, 0) * 0.12)
     dj_team_mult = (1.10 + levels.get(6, 0) * 0.04) if l.dj_active else 1.0
-    total_mult = global_mult * dj_team_mult
+    task_mult = float(getattr(l, 'task_income_buff', 1.0))
+    total_mult = global_mult * dj_team_mult * task_mult
 
     # Passive je jen od mikrofonu a DJ aury, ne od kazde postavy zvlast.
     base_passive = (1 if l.mikrofon_active else 0) + (1 if l.dj_active else 0)
 
-    auto_income = int(round(base_passive * total_mult))
+    auto_income = int(round(base_passive * total_mult * rebirth_mult))
     # Role economics: drummer = rychly tick, guitarist = mensi burst,
     # pianist = stabilne nejsilnejsi DPS, DJ = buff + stredni vlastni tick.
-    drum_tick_income = int(round((1.2 + levels.get(1, 0) * 1.6) * total_mult))
-    guitar_burst_income = int(round((2.0 + levels.get(2, 0) * 1.8) * total_mult))
-    piano_tick_income = int(round((2.4 + levels.get(5, 0) * 2.2) * total_mult))
-    dj_tick_income = int(round((4.0 + levels.get(6, 0) * 2.2) * global_mult))
+    drum_tick_income = int(round((1.2 + levels.get(1, 0) * 1.6) * total_mult * rebirth_mult))
+    guitar_burst_income = int(round((2.0 + levels.get(2, 0) * 1.8) * total_mult * rebirth_mult))
+    piano_tick_income = int(round((2.4 + levels.get(5, 0) * 2.2) * total_mult * rebirth_mult))
+    dj_tick_income = int(round((4.0 + levels.get(6, 0) * 2.2) * global_mult * rebirth_mult))
 
     drum_tick_income = max(1, drum_tick_income)
     guitar_burst_income = max(1, guitar_burst_income)
@@ -83,6 +199,8 @@ while running:
                         lista.settings_tab = 'Sound'
                     elif hasattr(lista, 'btn_tab_graphics') and lista.btn_tab_graphics.collidepoint(ui_pos):
                         lista.settings_tab = 'Graphics'
+                    elif hasattr(lista, 'btn_tab_ui') and lista.btn_tab_ui.collidepoint(ui_pos):
+                        lista.settings_tab = 'UI'
                     elif hasattr(lista, 'btn_tab_developer') and lista.btn_tab_developer.collidepoint(ui_pos):
                         lista.settings_tab = 'Developer'
 
@@ -120,10 +238,53 @@ while running:
                             else:
                                 lista.ui_scale = min(2.0, getattr(lista, 'ui_scale', 1.0) + 0.1)
 
+                    elif getattr(lista, 'settings_tab', 'Sound') == 'UI':
+                        if hasattr(lista, 'btn_lang_toggle') and lista.btn_lang_toggle.collidepoint(ui_pos):
+                            lista.language = 'EN' if getattr(lista, 'language', 'CZ') == 'CZ' else 'CZ'
+                        elif hasattr(lista, 'btn_num_format_toggle') and lista.btn_num_format_toggle.collidepoint(ui_pos):
+                            lista.number_format = 'compact' if getattr(lista, 'number_format', 'plain') == 'plain' else 'plain'
+                        elif hasattr(lista, 'btn_combo_toggle') and lista.btn_combo_toggle.collidepoint(ui_pos):
+                            lista.show_combo_text = not getattr(lista, 'show_combo_text', True)
+
+                    elif getattr(lista, 'settings_tab', 'Sound') == 'Developer':
+                        if getattr(lista, 'rebirth_confirm_open', False):
+                            if hasattr(lista, 'btn_rebirth_confirm') and lista.btn_rebirth_confirm.collidepoint(ui_pos):
+                                if perform_rebirth(lista):
+                                    now = time.time()
+                                    last_income_update = now
+                                    last_drum_hit = now
+                                    last_guitar_strum = now
+                                    last_piano_play = now
+                                    last_dj_play = now
+                                    last_drum_tick = now
+                                    last_piano_tick = now
+                                    last_dj_tick = now
+                                    last_guitar_burst = now
+                                    if hasattr(lista, 'pridat_floating_text'):
+                                        mult = get_rebirth_multiplier(lista)
+                                        msg = txt(lista, "rebirth_done", "Rebirth! Mult x{mult}").format(mult=int(mult))
+                                        lista.pridat_floating_text(25, 130, msg, (255, 220, 120), life=1.6)
+                            elif hasattr(lista, 'btn_rebirth_cancel') and lista.btn_rebirth_cancel.collidepoint(ui_pos):
+                                lista.rebirth_confirm_open = False
+                        elif hasattr(lista, 'btn_rebirth') and lista.btn_rebirth.collidepoint(ui_pos):
+                            if can_rebirth(lista):
+                                lista.rebirth_confirm_open = True
+                            elif hasattr(lista, 'pridat_floating_text'):
+                                need = int(getattr(lista, 'rebirth_requirement', 1_000_000))
+                                msg = txt(lista, "rebirth_from", "Rebirth od {need}$").format(need=need)
+                                lista.pridat_floating_text(25, 130, msg, (255, 190, 190), life=1.2)
+
                     continue
 
                 if lista.logo_rect.collidepoint(ui_pos):
                     lista.settings_otevrene = True
+                    continue
+
+                task_action = lista.handle_task_panel_click(ui_pos) if hasattr(lista, 'handle_task_panel_click') else None
+                if task_action:
+                    action, task_id = task_action
+                    if action == "claim" and task_id:
+                        vyzvednout_odmenu_ukolu(lista, task_id)
                     continue
 
                 if not lista.menu_otevrene and (lista.singer_rect.collidepoint(event.pos) or (lista.mikrofon_active and lista.mikrofon_rect.collidepoint(event.pos))):
@@ -133,9 +294,12 @@ while running:
                     lista.combo_count = lista.combo_clicks
                     lista.combo_until = now + 1.2
 
-                    click_income = max(1, int(round(lista.sila_kliku * lista.combo_multiplier)))
-                    lista.penize += click_income
+                    click_income = max(1, int(round(lista.sila_kliku * lista.combo_multiplier * get_rebirth_multiplier(lista))))
+                    pridat_penize(lista, click_income)
+                    if hasattr(lista, 'statistics') and isinstance(lista.statistics, dict):
+                        lista.statistics['total_clicks'] = int(lista.statistics.get('total_clicks', 0)) + 1
                     lista.kliknuti_historie.append((now, click_income))
+                    aktualizovat_ukol(lista, "click_200", add=1)
                     if hasattr(lista, 'pridat_floating_text'):
                         lista.pridat_floating_text(
                             lista.singer_rect.centerx - 20,
@@ -195,6 +359,7 @@ while running:
                                             lista.pianist_active = True
                                         elif i == 4:
                                             lista.dj_active = True
+                                            aktualizovat_ukol(lista, "buy_dj", value=1)
                                             
                                     elif lista.aktivni_kategorie == "Vylepšení":
                                         lista.item_prices["Vylepšení"][i] *= 3
@@ -226,9 +391,10 @@ while running:
     
     current_time = time.time()
     auto_income, drum_tick_income, guitar_burst_income, piano_tick_income, dj_tick_income = vypocitat_vydelky(lista)
+    aktualizovat_ukol(lista, "reach_10k_ps", value=int(getattr(lista, 'prijem', 0)))
 
     if current_time - last_income_update >= 1.0:
-        lista.penize += auto_income
+        pridat_penize(lista, auto_income)
         if auto_income > 0 and hasattr(lista, 'pridat_floating_text'):
             lista.pridat_floating_text(
                 lista.sirka // 2 - 10,
@@ -243,7 +409,7 @@ while running:
 
     if lista.drummer_active and current_time - last_drum_tick >= 0.6:
         drum_income = drum_tick_income
-        lista.penize += drum_income
+        pridat_penize(lista, drum_income)
         if hasattr(lista, 'pridat_floating_text'):
             lista.pridat_floating_text(
                 lista.drummer_rect.centerx - 8,
@@ -260,7 +426,7 @@ while running:
 
     if lista.guitarist_active and current_time - last_guitar_burst >= 4.0:
         burst_income = guitar_burst_income
-        lista.penize += burst_income
+        pridat_penize(lista, burst_income)
         if hasattr(lista, 'pridat_floating_text'):
             lista.pridat_floating_text(
                 lista.guitarist_rect.centerx - 14,
@@ -274,7 +440,7 @@ while running:
 
     if lista.pianist_active and current_time - last_piano_tick >= 0.5:
         piano_income = piano_tick_income
-        lista.penize += piano_income
+        pridat_penize(lista, piano_income)
         if hasattr(lista, 'pridat_floating_text'):
             lista.pridat_floating_text(
                 lista.pianist_rect.centerx - 10,
@@ -295,7 +461,7 @@ while running:
 
     if lista.dj_active and current_time - last_dj_tick >= 1.2:
         dj_income = dj_tick_income
-        lista.penize += dj_income
+        pridat_penize(lista, dj_income)
         if hasattr(lista, 'pridat_floating_text'):
             lista.pridat_floating_text(
                 lista.dj_rect.centerx - 8,

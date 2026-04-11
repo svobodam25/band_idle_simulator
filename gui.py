@@ -18,11 +18,20 @@ class Lista():
         self.sirka = sirka
         self.vyska_okna = vyska
         self.vyska = 100
-        self.penize = 1000000
+        self.penize = 0
         self.prijem = 0
         self.sila_kliku = 1
         self.kliknuti_historie = []
         self.font = pygame.font.SysFont(None, 60)
+
+        self.rebirth_count = 0
+        self.rebirth_requirement = 1_000_000
+        self.rebirth_confirm_open = False
+        self.statistics = {
+            "total_clicks": 0,
+            "total_earned": 0,
+            "total_rebirths": 0,
+        }
 
         self.menu_otevrene = False
         self.odrazu = 0
@@ -39,6 +48,10 @@ class Lista():
             "Členové": ["Mikrofon", "Bubeník", "Kytarista", "Pianista", "DJ", "Položka 6", "Položka 7"],
             "Vylepšení": ["Zlaté hlasivky (+1 Klik)", "Lepší paličky (+2 $/s)", "Lepší trsátko (+5 $/s)", "Těžké basy (+8 $/s)", "Lepší mikrofon (+5 Klik)", "Lepší klávesy (+6 $/s)", "Lepší mix pult (+8 $/s)"]
         }
+        self.menu_items_en = {
+            "Členové": ["Microphone", "Drummer", "Guitarist", "Pianist", "DJ", "Item 6", "Item 7"],
+            "Vylepšení": ["Golden Vocal Cords (+1 Click)", "Better Drumsticks (+2 $/s)", "Better Pick (+5 $/s)", "Heavy Bass (+8 $/s)", "Better Microphone (+5 Click)", "Better Keys (+6 $/s)", "Better Mixer (+8 $/s)"]
+        }
         self.item_prices = {
             "Členové": {0: 25, 1: 75, 2: 150, 3: 400, 4: 1000, 5: 3000, 6: 10000},
             "Vylepšení": {0: 200, 1: 450, 2: 900, 3: 2000, 4: 5000, 5: 3500, 6: 8000}
@@ -52,6 +65,15 @@ class Lista():
             4: "Silnejsi mikrofon: +5 klik.",
             5: "Piano boost: +6 $/s (jen kdyz je aktivni).",
             6: "DJ boost: +8 $/s (jen kdyz je aktivni)."
+        }
+        self.upgrade_tooltips_en = {
+            0: "Stronger voice: +1 click.",
+            1: "Drummer boost: +2 $/s (only when active).",
+            2: "Guitar boost: +5 $/s (only when active).",
+            3: "Bass boost: +8 $/s.",
+            4: "Stronger mic: +5 click.",
+            5: "Piano boost: +6 $/s (only when active).",
+            6: "DJ boost: +8 $/s (only when active)."
         }
         
         self.item_height = 70
@@ -160,6 +182,9 @@ class Lista():
 
         self.settings_otevrene = False
         self.settings_tab = 'Sound'
+        self.language = 'CZ'
+        self.number_format = 'plain'
+        self.show_combo_text = True
         self.animations_disabled = False
         self.fps_options = [30, 60, 120, 0]
         self.fps_index = 1
@@ -173,6 +198,49 @@ class Lista():
         self.combo_until = 0.0
         self.combo_clicks = 0
         self.combo_multiplier = 1.0
+        self.task_font = pygame.font.SysFont(None, 24)
+        self.income_font = pygame.font.SysFont(None, 23)
+        self.task_income_buff = 1.0
+        self.cosmetics_unlocked = set()
+        self.daily_tasks = [
+            {
+                "id": "click_200",
+                "title": "Udelej 200 kliku",
+                "target": 200,
+                "current": 0,
+                "reward_type": "money",
+                "reward_value": 1500,
+                "completed": False,
+                "claimed": False,
+            },
+            {
+                "id": "buy_dj",
+                "title": "Kup DJ",
+                "target": 1,
+                "current": 0,
+                "reward_type": "buff",
+                "reward_value": 0.10,
+                "completed": False,
+                "claimed": False,
+            },
+            {
+                "id": "reach_10k_ps",
+                "title": "Dosahni 100 $/s",
+                "target": 100,
+                "current": 0,
+                "reward_type": "cosmetic",
+                "reward_value": "gold_logo",
+                "completed": False,
+                "claimed": False,
+            },
+        ]
+        self.task_panel_w = 280
+        self.task_panel_h = 176
+        self.task_panel_open = False
+        self.task_panel_x = float(self.sirka + 10)
+        self.task_panel_target_x = float(self.sirka + 10)
+        self.btn_tasks_toggle = pygame.Rect(self.sirka - 190, 20, 95, 50)
+        self.task_claim_buttons = {}
         
         self._aktualizovat_rozmery_okna(sirka, vyska)
 
@@ -200,13 +268,18 @@ class Lista():
         
         self.menu_rect = pygame.Rect(self.sirka - 90, 20, 70, 60)
         
-        self.settings_rect = pygame.Rect(self.sirka // 2 - 250, self.vyska_okna // 2 - 220, 500, 460)
+        settings_w = 640
+        settings_h = 560
+        settings_x = (self.sirka - settings_w) // 2
+        settings_y = max(10, (self.vyska_okna - settings_h) // 2)
+        self.settings_rect = pygame.Rect(settings_x, settings_y, settings_w, settings_h)
         self.btn_zavrit_nastaveni = pygame.Rect(self.settings_rect.right - 40, self.settings_rect.y + 10, 30, 30)
         
-        tab_w = 140
+        tab_w = (self.settings_rect.width - 80 - 30) // 4
         self.btn_tab_sound = pygame.Rect(self.settings_rect.x + 30, self.settings_rect.y + 60, tab_w, 40)
         self.btn_tab_graphics = pygame.Rect(self.btn_tab_sound.right + 10, self.settings_rect.y + 60, tab_w, 40)
-        self.btn_tab_developer = pygame.Rect(self.btn_tab_graphics.right + 10, self.settings_rect.y + 60, tab_w, 40)
+        self.btn_tab_ui = pygame.Rect(self.btn_tab_graphics.right + 10, self.settings_rect.y + 60, tab_w, 40)
+        self.btn_tab_developer = pygame.Rect(self.btn_tab_ui.right + 10, self.settings_rect.y + 60, tab_w, 40)
         
         self.btn_vol_minus = pygame.Rect(self.settings_rect.centerx - 100, self.settings_rect.y + 180, 50, 50)
         self.btn_vol_plus = pygame.Rect(self.settings_rect.centerx + 50, self.settings_rect.y + 180, 50, 50)
@@ -216,8 +289,19 @@ class Lista():
         self.btn_fps_change = pygame.Rect(self.settings_rect.centerx - 100, self.settings_rect.y + 240, 200, 40)
         self.btn_ui_scale_minus = pygame.Rect(self.settings_rect.centerx - 170, self.settings_rect.y + 295, 40, 40)
         self.btn_ui_scale_plus = pygame.Rect(self.settings_rect.centerx + 130, self.settings_rect.y + 295, 40, 40)
+
+        self.btn_lang_toggle = pygame.Rect(self.settings_rect.centerx - 120, self.settings_rect.y + 130, 240, 40)
+        self.btn_num_format_toggle = pygame.Rect(self.settings_rect.centerx - 120, self.settings_rect.y + 185, 240, 40)
+        self.btn_combo_toggle = pygame.Rect(self.settings_rect.centerx - 120, self.settings_rect.y + 240, 240, 40)
+        self.btn_rebirth = pygame.Rect(self.settings_rect.centerx - 200, self.settings_rect.y + 390, 400, 48)
+        self.btn_rebirth_confirm = pygame.Rect(self.settings_rect.centerx - 150, self.settings_rect.y + 472, 140, 40)
+        self.btn_rebirth_cancel = pygame.Rect(self.settings_rect.centerx + 10, self.settings_rect.y + 472, 140, 40)
         
         self.btn_exit_game = pygame.Rect(self.settings_rect.centerx - 100, self.settings_rect.bottom - 60, 200, 40)
+        self.btn_tasks_toggle = pygame.Rect(self.sirka - 190, 20, 95, 50)
+        self.task_panel_target_x = float((self.sirka - self.task_panel_w - 10) if self.task_panel_open else (self.sirka + 10))
+        if not hasattr(self, 'task_panel_x'):
+            self.task_panel_x = self.task_panel_target_x
         
         self.settings_font = pygame.font.SysFont(None, 45)
         self.vol_btn_font = pygame.font.SysFont(None, 60)
@@ -304,6 +388,281 @@ class Lista():
             base = 0.08 + (0.30 if self.guitarist_active else 0.0)
             self.guitar_sound.set_volume(real_volume * base * (0.75 + 0.5 * mix))
 
+    def _txt(self, key):
+        cs = {
+            "settings": "Nastaveni",
+            "tab_sound": "Zvuk",
+            "tab_graphics": "Grafika",
+            "tab_ui": "UI",
+            "tab_developer": "Vyvojari",
+            "exit": "Odejit ze hry",
+            "volume": "Hlasitost hudby:",
+            "authors": "Autori hry:",
+            "lang": "Jazyk",
+            "num": "Format cisel",
+            "combo": "Combo text",
+            "on": "ZAP",
+            "off": "VYP",
+            "buy": "Koupit",
+            "tasks": "Ukoly",
+            "daily_tasks": "Denni ukoly",
+            "claim": "Vyzvednout",
+            "claimed": "Vyzvednuto",
+            "task": "Ukol",
+            "cat_members": "Clenove",
+            "cat_upgrades": "Vylepseni",
+            "animations": "Animace",
+            "fps_lock": "FPS Lock",
+            "fps_unlimited": "Bez limitu",
+            "rebirth": "Rebirth",
+            "income_mult": "Nasobic prijmu",
+            "next_rebirth": "Dalsi rebirth: 2x prijem",
+            "rebirth_need": "Potrebujes 1 000 000$",
+            "rebirth_confirm": "Potvrdit rebirth?",
+            "confirm": "Potvrdit",
+            "cancel": "Zrusit",
+            "task_click_200": "Udelej 200 kliku",
+            "task_buy_dj": "Kup DJ",
+            "task_reach_100_ps": "Dosahni 100 $/s",
+            "task_reward_money": "Ukol odmena +{amount}$",
+            "task_reward_buff": "Ukol buff +{pct}%",
+            "task_reward_cosmetic": "Nova kosmetika odemcena",
+            "rebirth_from": "Rebirth od {need}$",
+            "combo_label": "KOMBO",
+            "rebirth_done": "Rebirth! Nasobic x{mult}",
+        }
+        en = {
+            "settings": "Settings",
+            "tab_sound": "Sound",
+            "tab_graphics": "Graphics",
+            "tab_ui": "UI",
+            "tab_developer": "Developers",
+            "exit": "Exit game",
+            "volume": "Music volume:",
+            "authors": "Game authors:",
+            "lang": "Language",
+            "num": "Number format",
+            "combo": "Combo text",
+            "on": "ON",
+            "off": "OFF",
+            "buy": "Buy",
+            "tasks": "Tasks",
+            "daily_tasks": "Daily tasks",
+            "claim": "Claim",
+            "claimed": "Claimed",
+            "task": "Task",
+            "cat_members": "Members",
+            "cat_upgrades": "Upgrades",
+            "animations": "Animations",
+            "fps_lock": "FPS Lock",
+            "fps_unlimited": "Unlimited",
+            "rebirth": "Rebirth",
+            "income_mult": "Income multiplier",
+            "next_rebirth": "Next rebirth: 2x income",
+            "rebirth_need": "You need 1,000,000$",
+            "rebirth_confirm": "Confirm rebirth?",
+            "confirm": "Confirm",
+            "cancel": "Cancel",
+            "task_click_200": "Do 200 clicks",
+            "task_buy_dj": "Buy DJ",
+            "task_reach_100_ps": "Reach 100 $/s",
+            "task_reward_money": "Task reward +{amount}$",
+            "task_reward_buff": "Task buff +{pct}%",
+            "task_reward_cosmetic": "New cosmetic unlocked",
+            "rebirth_from": "Rebirth from {need}$",
+            "combo_label": "COMBO",
+            "rebirth_done": "Rebirth! Mult x{mult}",
+        }
+        table = en if getattr(self, 'language', 'CZ') == 'EN' else cs
+        return table.get(key, key)
+
+    def format_number(self, value):
+        n = float(value)
+        mode = getattr(self, 'number_format', 'plain')
+        if mode == 'compact':
+            absv = abs(n)
+            if absv >= 1_000_000_000:
+                return f"{n / 1_000_000_000:.2f}B"
+            if absv >= 1_000_000:
+                return f"{n / 1_000_000:.2f}M"
+            if absv >= 1_000:
+                return f"{n / 1_000:.2f}K"
+            return str(int(round(n)))
+        return f"{int(round(n)):,}"
+
+    def get_menu_item_name(self, category, index):
+        if getattr(self, 'language', 'CZ') == 'EN':
+            return self.menu_items_en.get(category, self.menu_items.get(category, []))[index]
+        return self.menu_items.get(category, [])[index]
+
+    def get_upgrade_tooltip(self, index):
+        if getattr(self, 'language', 'CZ') == 'EN':
+            return self.upgrade_tooltips_en.get(index, "")
+        return self.upgrade_tooltips.get(index, "")
+
+    def get_task_title(self, task):
+        tid = task.get('id', '')
+        if tid == 'click_200':
+            return self._txt('task_click_200')
+        if tid == 'buy_dj':
+            return self._txt('task_buy_dj')
+        if tid == 'reach_10k_ps':
+            return self._txt('task_reach_100_ps')
+        return task.get('title', self._txt('task'))
+
+    def get_rebirth_multiplier(self):
+        return float(2 ** int(getattr(self, 'rebirth_count', 0)))
+
+    def can_rebirth(self):
+        requirement = int(getattr(self, 'rebirth_requirement', 1_000_000))
+        return int(getattr(self, 'penize', 0)) >= requirement
+
+    def perform_rebirth(self):
+        self.rebirth_count = int(getattr(self, 'rebirth_count', 0)) + 1
+        self.statistics["total_rebirths"] = int(self.statistics.get("total_rebirths", 0)) + 1
+
+        # Reset run progress only.
+        self.penize = 0
+        self.prijem = 0
+        self.sila_kliku = 1
+        self.kliknuti_historie.clear()
+        self.floating_texts.clear()
+        self.combo_count = 0
+        self.combo_until = 0.0
+        self.combo_clicks = 0
+        self.combo_multiplier = 1.0
+        self.task_income_buff = 1.0
+
+        self.mikrofon_active = False
+        self.drummer_active = False
+        self.guitarist_active = False
+        self.pianist_active = False
+        self.dj_active = False
+
+        self.bought_items = {"Členové": set(), "Vylepšení": set()}
+        self.upgrade_levels = {i: 0 for i in range(7)}
+        self.item_prices = {
+            "Členové": {0: 25, 1: 75, 2: 150, 3: 400, 4: 1000, 5: 3000, 6: 10000},
+            "Vylepšení": {0: 200, 1: 450, 2: 900, 3: 2000, 4: 5000, 5: 3500, 6: 8000}
+        }
+
+        for task in self.daily_tasks:
+            task["current"] = 0
+            task["completed"] = False
+            task["claimed"] = False
+
+        self.menu_otevrene = False
+        self.scroll_offset = 0
+        self.rebirth_confirm_open = False
+        self.update_audio_layers()
+
+    def get_persistent_data(self):
+        # Only long-term progression fields should be persisted here.
+        return {
+            "settings": {
+                "hlasitost": float(getattr(self, 'hlasitost', 0.5)),
+                "animations_disabled": bool(getattr(self, 'animations_disabled', False)),
+                "fps_index": int(getattr(self, 'fps_index', 1)),
+                "ui_scale": float(getattr(self, 'ui_scale', 1.0)),
+                "language": str(getattr(self, 'language', 'CZ')),
+                "number_format": str(getattr(self, 'number_format', 'plain')),
+                "show_combo_text": bool(getattr(self, 'show_combo_text', True)),
+            },
+            "rebirth": {
+                "rebirth_count": int(getattr(self, 'rebirth_count', 0)),
+            },
+            "cosmetics_unlocked": sorted(list(getattr(self, 'cosmetics_unlocked', set()))),
+            "statistics": dict(getattr(self, 'statistics', {})),
+        }
+
+    def apply_persistent_data(self, data):
+        if not isinstance(data, dict):
+            return
+
+        settings = data.get("settings", {})
+        self.hlasitost = float(settings.get("hlasitost", getattr(self, 'hlasitost', 0.5)))
+        self.animations_disabled = bool(settings.get("animations_disabled", getattr(self, 'animations_disabled', False)))
+        self.fps_index = int(settings.get("fps_index", getattr(self, 'fps_index', 1)))
+        self.ui_scale = float(settings.get("ui_scale", getattr(self, 'ui_scale', 1.0)))
+        self.language = str(settings.get("language", getattr(self, 'language', 'CZ')))
+        self.number_format = str(settings.get("number_format", getattr(self, 'number_format', 'plain')))
+        self.show_combo_text = bool(settings.get("show_combo_text", getattr(self, 'show_combo_text', True)))
+
+        rebirth = data.get("rebirth", {})
+        self.rebirth_count = int(rebirth.get("rebirth_count", getattr(self, 'rebirth_count', 0)))
+
+        unlocked = data.get("cosmetics_unlocked", [])
+        self.cosmetics_unlocked = set(unlocked) if isinstance(unlocked, list) else set()
+
+        stats = data.get("statistics", {})
+        if isinstance(stats, dict):
+            self.statistics.update(stats)
+
+        self.upravit_hlasitost(0.0)
+
+    def get_run_data(self):
+        return {
+            "penize": int(getattr(self, 'penize', 0)),
+            "prijem": int(getattr(self, 'prijem', 0)),
+            "sila_kliku": int(getattr(self, 'sila_kliku', 1)),
+            "mikrofon_active": bool(getattr(self, 'mikrofon_active', False)),
+            "drummer_active": bool(getattr(self, 'drummer_active', False)),
+            "guitarist_active": bool(getattr(self, 'guitarist_active', False)),
+            "pianist_active": bool(getattr(self, 'pianist_active', False)),
+            "dj_active": bool(getattr(self, 'dj_active', False)),
+            "combo_clicks": int(getattr(self, 'combo_clicks', 0)),
+            "combo_multiplier": float(getattr(self, 'combo_multiplier', 1.0)),
+            "task_income_buff": float(getattr(self, 'task_income_buff', 1.0)),
+            "upgrade_levels": dict(getattr(self, 'upgrade_levels', {i: 0 for i in range(7)})),
+            "bought_items": {
+                "Členové": sorted(list(self.bought_items.get("Členové", set()))),
+                "Vylepšení": sorted(list(self.bought_items.get("Vylepšení", set()))),
+            },
+            "item_prices": {
+                "Členové": dict(self.item_prices.get("Členové", {})),
+                "Vylepšení": dict(self.item_prices.get("Vylepšení", {})),
+            },
+            "daily_tasks": [dict(task) for task in getattr(self, 'daily_tasks', [])],
+        }
+
+    def apply_run_data(self, data):
+        if not isinstance(data, dict):
+            return
+
+        self.penize = int(data.get("penize", getattr(self, 'penize', 0)))
+        self.prijem = int(data.get("prijem", getattr(self, 'prijem', 0)))
+        self.sila_kliku = int(data.get("sila_kliku", getattr(self, 'sila_kliku', 1)))
+        self.mikrofon_active = bool(data.get("mikrofon_active", getattr(self, 'mikrofon_active', False)))
+        self.drummer_active = bool(data.get("drummer_active", getattr(self, 'drummer_active', False)))
+        self.guitarist_active = bool(data.get("guitarist_active", getattr(self, 'guitarist_active', False)))
+        self.pianist_active = bool(data.get("pianist_active", getattr(self, 'pianist_active', False)))
+        self.dj_active = bool(data.get("dj_active", getattr(self, 'dj_active', False)))
+        self.combo_clicks = int(data.get("combo_clicks", getattr(self, 'combo_clicks', 0)))
+        self.combo_multiplier = float(data.get("combo_multiplier", getattr(self, 'combo_multiplier', 1.0)))
+        self.task_income_buff = float(data.get("task_income_buff", getattr(self, 'task_income_buff', 1.0)))
+
+        levels = data.get("upgrade_levels", {})
+        if isinstance(levels, dict):
+            self.upgrade_levels = {int(k): int(v) for k, v in levels.items()}
+
+        bought = data.get("bought_items", {})
+        if isinstance(bought, dict):
+            self.bought_items = {
+                "Členové": set(bought.get("Členové", [])),
+                "Vylepšení": set(bought.get("Vylepšení", [])),
+            }
+
+        prices = data.get("item_prices", {})
+        if isinstance(prices, dict):
+            self.item_prices = {
+                "Členové": dict(prices.get("Členové", self.item_prices.get("Členové", {}))),
+                "Vylepšení": dict(prices.get("Vylepšení", self.item_prices.get("Vylepšení", {}))),
+            }
+
+        tasks = data.get("daily_tasks", None)
+        if isinstance(tasks, list):
+            self.daily_tasks = [dict(t) for t in tasks if isinstance(t, dict)]
+
     def zahraj_na_buben(self):
         """Spustí animaci a popř. zvuk úderu do bubnu."""
         self.drum_target_scale = 1.3
@@ -342,6 +701,9 @@ class Lista():
             t for t in self.floating_texts
             if (now - t["born"]) <= t["life"]
         ]
+
+        self.task_panel_target_x = float((self.sirka - self.task_panel_w - 10) if self.task_panel_open else (self.sirka + 10))
+        self.task_panel_x += (self.task_panel_target_x - self.task_panel_x) * 0.22
 
         if not self.menu_otevrene and self.menu_vyska >= 600:
             self.menu_vyska = 600
@@ -535,9 +897,9 @@ class Lista():
             
             pygame.draw.rect(okno, (100, 100, 100) if self.aktivni_kategorie != "Členové" else (150, 80, 40), self.rect_tab_clenove)
             pygame.draw.rect(okno, (100, 100, 100) if self.aktivni_kategorie != "Vylepšení" else (150, 80, 40), self.rect_tab_vylepseni)
-            
-            okno.blit(self.button_font.render("Členové", True, (255, 255, 255)), (self.rect_tab_clenove.x + 20, tab_y + 10))
-            okno.blit(self.button_font.render("Vylepšení", True, (255, 255, 255)), (self.rect_tab_vylepseni.x + 20, tab_y + 10))
+
+            okno.blit(self.button_font.render(self._txt("cat_members"), True, (255, 255, 255)), (self.rect_tab_clenove.x + 20, tab_y + 10))
+            okno.blit(self.button_font.render(self._txt("cat_upgrades"), True, (255, 255, 255)), (self.rect_tab_vylepseni.x + 20, tab_y + 10))
             
             menu_y = self.vyska + 55
             visible_index = 0
@@ -546,7 +908,7 @@ class Lista():
                 if i in self.bought_items[self.aktivni_kategorie]:
                     continue
                 
-                item = aktualni_polozky[i]
+                item = self.get_menu_item_name(self.aktivni_kategorie, i)
                 item_y = menu_y + visible_index * (self.item_height + self.item_spacing) - self.scroll_offset
                 visible_index += 1
                 
@@ -574,7 +936,8 @@ class Lista():
                         button_rect = pygame.Rect(button_x, button_y, self.button_width, self.button_height)
                         
                         button_color = self.button_color if can_afford else self.button_disabled_color
-                        button_text_render = self.button_text if can_afford else self.button_text_disabled
+                        buy_label = self._txt("buy")
+                        button_text_render = self.button_font.render(buy_label, True, (255, 255, 255) if can_afford else (100, 100, 100))
                         
                         pygame.draw.rect(okno, button_color, button_rect, border_radius=8)
                         
@@ -583,7 +946,7 @@ class Lista():
             
             self._draw_scrollbar(okno)
             if hovered_upgrade_index is not None:
-                tooltip = self.upgrade_tooltips.get(hovered_upgrade_index, "")
+                tooltip = self.get_upgrade_tooltip(hovered_upgrade_index)
                 if tooltip:
                     self._draw_tooltip(okno, tooltip, int(mouse_ui_pos[0]), int(mouse_ui_pos[1]))
         
@@ -621,8 +984,10 @@ class Lista():
         pygame.draw.rect(okno, self.barva, (0, 0, self.sirka, self.vyska))
 
         okno.blit(self.logo_image, self.logo_rect)
+        if "gold_logo" in getattr(self, 'cosmetics_unlocked', set()):
+            pygame.draw.circle(okno, (255, 215, 0), self.logo_rect.center, 62, 4)
 
-        text = penize_font.render(f"{self.penize}$", True, (0, 0, 0))
+        text = penize_font.render(f"{self.format_number(self.penize)}$", True, (0, 0, 0))
         text_rect = text.get_rect(center=(self.sirka // 2, self.vyska // 2))
         okno.blit(text, text_rect)
 
@@ -630,9 +995,11 @@ class Lista():
         self.kliknuti_historie = [(cas, hodnota) for cas, hodnota in self.kliknuti_historie if aktualni_cas - cas <= 1.0]
         celkovy_prijem = self.prijem + sum(hodnota for cas, hodnota in self.kliknuti_historie)
 
-        prijem_text = prijem_font.render(f"(+{celkovy_prijem} $/s)", True, (50, 205, 50))
+        prijem_text = prijem_font.render(f"(+{self.format_number(celkovy_prijem)} $/s)", True, (50, 205, 50))
         prijem_rect = prijem_text.get_rect(midleft=(text_rect.right + 10, self.vyska // 2 + 5))
         okno.blit(prijem_text, prijem_rect)
+
+        self._draw_daily_tasks(okno)
 
         line_color = (0, 0, 0)
         line_width = 5
@@ -644,9 +1011,9 @@ class Lista():
         pygame.draw.line(okno, line_color, (x_start, 50), (x_end, 50), line_width)
         pygame.draw.line(okno, line_color, (x_start, 65), (x_end, 65), line_width)
 
-        if time.time() < getattr(self, 'combo_until', 0.0):
+        if getattr(self, 'show_combo_text', True) and time.time() < getattr(self, 'combo_until', 0.0):
             combo_mul = float(getattr(self, 'combo_multiplier', 1.0))
-            combo_text = self.combo_font.render(f"COMBO x{combo_mul:.1f}", True, (255, 220, 80))
+            combo_text = self.combo_font.render(f"{self._txt('combo_label')} x{combo_mul:.1f}", True, (255, 220, 80))
             combo_rect = combo_text.get_rect(center=(self.singer_x, max(120, self.singer_y - 170)))
             okno.blit(combo_text, combo_rect)
 
@@ -661,7 +1028,7 @@ class Lista():
             pygame.draw.rect(okno, (220, 220, 220), self.settings_rect, border_radius=15)
             pygame.draw.rect(okno, (0, 0, 0), self.settings_rect, 3, border_radius=15)
             
-            nadpis_text = self.settings_font.render("Nastavení", True, (0, 0, 0))
+            nadpis_text = self.settings_font.render(self._txt("settings"), True, (0, 0, 0))
             okno.blit(nadpis_text, nadpis_text.get_rect(center=(self.settings_rect.centerx, self.settings_rect.y + 30)))
 
             # Tabs
@@ -672,14 +1039,15 @@ class Lista():
                 txt = self.res_font.render(label, True, (0, 0, 0))
                 okno.blit(txt, txt.get_rect(center=rect.center))
 
-            draw_tab(self.btn_tab_sound, "Zvuk", getattr(self, 'settings_tab', '') == "Sound")
-            draw_tab(self.btn_tab_graphics, "Grafika", getattr(self, 'settings_tab', '') == "Graphics")
-            draw_tab(self.btn_tab_developer, "Vývojáři", getattr(self, 'settings_tab', '') == "Developer")
+            draw_tab(self.btn_tab_sound, self._txt("tab_sound"), getattr(self, 'settings_tab', '') == "Sound")
+            draw_tab(self.btn_tab_graphics, self._txt("tab_graphics"), getattr(self, 'settings_tab', '') == "Graphics")
+            draw_tab(self.btn_tab_ui, self._txt("tab_ui"), getattr(self, 'settings_tab', '') == "UI")
+            draw_tab(self.btn_tab_developer, self._txt("tab_developer"), getattr(self, 'settings_tab', '') == "Developer")
 
             tab = getattr(self, 'settings_tab', 'Sound')
             
             if tab == "Sound":
-                vol_text = self.res_font.render("Hlasitost hudby:", True, (0, 0, 0))
+                vol_text = self.res_font.render(self._txt("volume"), True, (0, 0, 0))
                 okno.blit(vol_text, vol_text.get_rect(center=(self.settings_rect.centerx, self.settings_rect.y + 140)))
                 
                 vol_val = self.settings_font.render(f"{int(self.hlasitost * 100)}%", True, (0, 0, 0))
@@ -705,7 +1073,8 @@ class Lista():
                 anim_color = (255, 100, 100) if anim_dis else (100, 255, 100)
                 pygame.draw.rect(okno, anim_color, self.btn_anim_toggle, border_radius=5)
                 pygame.draw.rect(okno, (0, 0, 0), self.btn_anim_toggle, 2, border_radius=5)
-                anim_txt = self.res_font.render("Animace: VYP" if anim_dis else "Animace: ZAP", True, (0, 0, 0))
+                anim_state = self._txt("off") if anim_dis else self._txt("on")
+                anim_txt = self.res_font.render(f"{self._txt('animations')}: {anim_state}", True, (0, 0, 0))
                 okno.blit(anim_txt, anim_txt.get_rect(center=self.btn_anim_toggle.center))
 
                 # FPS Limit
@@ -714,7 +1083,7 @@ class Lista():
                 opts = getattr(self, 'fps_options', [30, 60, 120, 0])
                 idx = getattr(self, 'fps_index', 1)
                 fps_val = opts[idx]
-                fps_str = f"FPS Lock: {fps_val}" if fps_val > 0 else "FPS Limit: Bez limitu"
+                fps_str = f"{self._txt('fps_lock')}: {fps_val}" if fps_val > 0 else f"{self._txt('fps_lock')}: {self._txt('fps_unlimited')}"
                 fps_txt = self.res_font.render(fps_str, True, (0, 0, 0))
                 okno.blit(fps_txt, fps_txt.get_rect(center=self.btn_fps_change.center))
 
@@ -731,19 +1100,75 @@ class Lista():
                 pygame.draw.rect(okno, (0, 0, 0), self.btn_ui_scale_plus, 2, border_radius=5)
                 okno.blit(self.res_font.render("+", True, (0, 0, 0)), self.res_font.render("+", True, (0, 0, 0)).get_rect(center=self.btn_ui_scale_plus.center))
 
+            elif tab == "UI":
+                pygame.draw.rect(okno, (120, 170, 255), self.btn_lang_toggle, border_radius=6)
+                pygame.draw.rect(okno, (0, 0, 0), self.btn_lang_toggle, 2, border_radius=6)
+                lang_label = "CZ" if getattr(self, 'language', 'CZ') == 'CZ' else "EN"
+                lang_txt = self.res_font.render(f"{self._txt('lang')}: {lang_label}", True, (0, 0, 0))
+                okno.blit(lang_txt, lang_txt.get_rect(center=self.btn_lang_toggle.center))
+
+                pygame.draw.rect(okno, (120, 220, 170), self.btn_num_format_toggle, border_radius=6)
+                pygame.draw.rect(okno, (0, 0, 0), self.btn_num_format_toggle, 2, border_radius=6)
+                mode = "1,234,567" if getattr(self, 'number_format', 'plain') == 'plain' else "1.23M"
+                num_txt = self.res_font.render(f"{self._txt('num')}: {mode}", True, (0, 0, 0))
+                okno.blit(num_txt, num_txt.get_rect(center=self.btn_num_format_toggle.center))
+
+                pygame.draw.rect(okno, (220, 190, 120), self.btn_combo_toggle, border_radius=6)
+                pygame.draw.rect(okno, (0, 0, 0), self.btn_combo_toggle, 2, border_radius=6)
+                combo_state = self._txt('on') if getattr(self, 'show_combo_text', True) else self._txt('off')
+                combo_txt = self.res_font.render(f"{self._txt('combo')}: {combo_state}", True, (0, 0, 0))
+                okno.blit(combo_txt, combo_txt.get_rect(center=self.btn_combo_toggle.center))
+
             elif tab == "Developer":
                 devs = ["Michal Svoboda", "Štěpán Šitina", "Daniel Wales"]
-                dev_title = self.res_font.render("Autoři hry:", True, (0, 0, 0))
+                dev_title = self.res_font.render(self._txt("authors"), True, (0, 0, 0))
                 okno.blit(dev_title, dev_title.get_rect(center=(self.settings_rect.centerx, self.settings_rect.y + 140)))
+                dev_font = pygame.font.SysFont(None, 52)
                 
                 for idx, dev in enumerate(devs):
-                    txt = self.settings_font.render(dev, True, (80, 80, 80))
-                    okno.blit(txt, txt.get_rect(center=(self.settings_rect.centerx, self.settings_rect.y + 200 + (idx * 40))))
+                    txt = dev_font.render(dev, True, (80, 80, 80))
+                    okno.blit(txt, txt.get_rect(center=(self.settings_rect.centerx, self.settings_rect.y + 200 + (idx * 44))))
+
+                rebirth_count = int(getattr(self, 'rebirth_count', 0))
+                rebirth_mult = self.get_rebirth_multiplier()
+                line1 = self.res_font.render(f"{self._txt('rebirth')} x{rebirth_count}", True, (25, 25, 25))
+                line2 = self.res_font.render(f"{self._txt('income_mult')} x{rebirth_mult:.0f}", True, (25, 25, 25))
+                okno.blit(line1, (self.settings_rect.x + 30, self.settings_rect.y + 332))
+                okno.blit(line2, (self.settings_rect.x + 30, self.settings_rect.y + 364))
+
+                can = self.can_rebirth()
+                btn_color = (100, 210, 130) if can else (145, 145, 145)
+                pygame.draw.rect(okno, btn_color, self.btn_rebirth, border_radius=8)
+                pygame.draw.rect(okno, (0, 0, 0), self.btn_rebirth, 2, border_radius=8)
+                next_txt = self.res_font.render(self._txt("next_rebirth"), True, (0, 0, 0))
+                okno.blit(next_txt, next_txt.get_rect(center=self.btn_rebirth.center))
+                if not can:
+                    need_txt = self.task_font.render(self._txt("rebirth_need"), True, (90, 20, 20))
+                    need_rect = need_txt.get_rect(center=(self.btn_rebirth.centerx, self.btn_rebirth.bottom + 16))
+                    okno.blit(need_txt, need_rect)
+
+                if getattr(self, 'rebirth_confirm_open', False):
+                    cbox = pygame.Rect(self.settings_rect.centerx - 180, self.settings_rect.y + 448, 360, 95)
+                    pygame.draw.rect(okno, (245, 245, 245), cbox, border_radius=10)
+                    pygame.draw.rect(okno, (0, 0, 0), cbox, 2, border_radius=10)
+                    ctext = self.res_font.render(self._txt("rebirth_confirm"), True, (20, 20, 20))
+                    okno.blit(ctext, ctext.get_rect(center=(cbox.centerx, cbox.y + 26)))
+
+                    pygame.draw.rect(okno, (100, 220, 130), self.btn_rebirth_confirm, border_radius=8)
+                    pygame.draw.rect(okno, (0, 0, 0), self.btn_rebirth_confirm, 2, border_radius=8)
+                    conf_txt = self.res_font.render(self._txt("confirm"), True, (0, 0, 0))
+                    okno.blit(conf_txt, conf_txt.get_rect(center=self.btn_rebirth_confirm.center))
+
+                    pygame.draw.rect(okno, (240, 140, 140), self.btn_rebirth_cancel, border_radius=8)
+                    pygame.draw.rect(okno, (0, 0, 0), self.btn_rebirth_cancel, 2, border_radius=8)
+                    cancel_txt = self.res_font.render(self._txt("cancel"), True, (0, 0, 0))
+                    okno.blit(cancel_txt, cancel_txt.get_rect(center=self.btn_rebirth_cancel.center))
 
             # Close Button
             pygame.draw.rect(okno, (255, 100, 100), self.btn_exit_game, border_radius=10)
             pygame.draw.rect(okno, (0, 0, 0), self.btn_exit_game, 2, border_radius=10)
-            okno.blit(self.res_font.render("Odejít ze hry", True, (0, 0, 0)), self.res_font.render("Odejít ze hry", True, (0, 0, 0)).get_rect(center=self.btn_exit_game.center))
+            exit_text = self.res_font.render(self._txt("exit"), True, (0, 0, 0))
+            okno.blit(exit_text, exit_text.get_rect(center=self.btn_exit_game.center))
 
             pygame.draw.rect(okno, (220, 50, 50), self.btn_zavrit_nastaveni, border_radius=5)
             pygame.draw.rect(okno, (0, 0, 0), self.btn_zavrit_nastaveni, 2, border_radius=5)
@@ -775,6 +1200,62 @@ class Lista():
             y_offset = int(34 * progress)
             pos = (int(entry["x"]), int(entry["y"] - y_offset))
             okno.blit(text_surface, pos)
+
+    def _draw_daily_tasks(self, okno):
+        pygame.draw.rect(okno, (40, 40, 40), self.btn_tasks_toggle, border_radius=8)
+        pygame.draw.rect(okno, (230, 230, 230), self.btn_tasks_toggle, 1, border_radius=8)
+        toggle_text = self.task_font.render(self._txt("tasks"), True, (255, 255, 255))
+        okno.blit(toggle_text, toggle_text.get_rect(center=self.btn_tasks_toggle.center))
+
+        x, y = int(self.task_panel_x), self.vyska + 8
+        w, h = self.task_panel_w, self.task_panel_h
+        panel = pygame.Rect(x, y, w, h)
+        pygame.draw.rect(okno, (18, 18, 18), panel, border_radius=10)
+        pygame.draw.rect(okno, (230, 230, 230), panel, 1, border_radius=10)
+
+        title = self.task_font.render(self._txt("daily_tasks"), True, (255, 255, 255))
+        okno.blit(title, (x + 10, y + 8))
+
+        tasks = getattr(self, 'daily_tasks', [])
+        self.task_claim_buttons = {}
+        row_y = y + 34
+        for task in tasks[:3]:
+            target = int(task.get("target", 1))
+            current = int(task.get("current", 0))
+            done = bool(task.get("completed", False))
+            claimed = bool(task.get("claimed", False))
+            mark = "[OK]" if done else "[ ]"
+            short = f"{mark} {self.get_task_title(task)}"
+            txt = self.income_font.render(short, True, (200, 255, 200) if done else (230, 230, 230))
+            okno.blit(txt, (x + 10, row_y))
+            progress = self.income_font.render(f"{min(current, target)}/{target}", True, (170, 170, 170))
+            okno.blit(progress, (x + w - 75, row_y))
+
+            if done and not claimed:
+                claim_rect = pygame.Rect(x + w - 140, row_y + 16, 126, 18)
+                self.task_claim_buttons[task.get("id")] = claim_rect
+                pygame.draw.rect(okno, (70, 130, 70), claim_rect, border_radius=5)
+                pygame.draw.rect(okno, (220, 220, 220), claim_rect, 1, border_radius=5)
+                claim_txt = self.income_font.render(self._txt("claim"), True, (255, 255, 255))
+                okno.blit(claim_txt, claim_txt.get_rect(center=claim_rect.center))
+            elif claimed:
+                done_txt = self.income_font.render(self._txt("claimed"), True, (170, 210, 170))
+                okno.blit(done_txt, (x + w - 120, row_y + 16))
+            row_y += 36
+
+    def handle_task_panel_click(self, ui_pos):
+        if self.btn_tasks_toggle.collidepoint(ui_pos):
+            self.task_panel_open = not self.task_panel_open
+            return ("toggle", None)
+
+        if not self.task_panel_open:
+            return None
+
+        for task_id, rect in self.task_claim_buttons.items():
+            if rect.collidepoint(ui_pos):
+                return ("claim", task_id)
+
+        return None
     
     def _draw_scrollbar(self, okno):
         """Draw scrollbar on the right side of the menu"""
