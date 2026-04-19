@@ -1,6 +1,7 @@
 import pygame
 import sys
 import time
+import random
 pygame.init()
 
 import gui
@@ -136,7 +137,8 @@ def vypocitat_vydelky(l):
     global_mult = 1.0 + (levels.get(3, 0) * 0.12)
     dj_team_mult = (1.10 + levels.get(6, 0) * 0.04) if l.dj_active else 1.0
     task_mult = float(getattr(l, 'task_income_buff', 1.0))
-    total_mult = global_mult * dj_team_mult * task_mult
+    concert_mult = float(getattr(l, 'concert_buff_mult', 1.0))
+    total_mult = global_mult * dj_team_mult * task_mult * concert_mult
 
     # Passive je jen od mikrofonu a DJ aury, ne od kazde postavy zvlast.
     base_passive = (1 if l.mikrofon_active else 0) + (1 if l.dj_active else 0)
@@ -147,7 +149,7 @@ def vypocitat_vydelky(l):
     drum_tick_income = int(round((1.2 + levels.get(1, 0) * 1.6) * total_mult * rebirth_mult))
     guitar_burst_income = int(round((2.0 + levels.get(2, 0) * 1.8) * total_mult * rebirth_mult))
     piano_tick_income = int(round((2.4 + levels.get(5, 0) * 2.2) * total_mult * rebirth_mult))
-    dj_tick_income = int(round((4.0 + levels.get(6, 0) * 2.2) * global_mult * rebirth_mult))
+    dj_tick_income = int(round((4.0 + levels.get(6, 0) * 2.2) * global_mult * rebirth_mult * concert_mult))
 
     drum_tick_income = max(1, drum_tick_income)
     guitar_burst_income = max(1, guitar_burst_income)
@@ -255,6 +257,21 @@ while running:
                     lista.settings_otevrene = True
                     continue
 
+                concert = getattr(lista, 'concert_active', None)
+                if concert is not None and not lista.menu_otevrene:
+                    dx = ui_pos[0] - concert["x"]
+                    dy = ui_pos[1] - concert["y"]
+                    if dx * dx + dy * dy <= concert["radius"] * concert["radius"]:
+                        now = time.time()
+                        lista.concert_buff_mult = 5.0
+                        lista.concert_buff_end = now + 20.0
+                        lista.concert_active = None
+                        lista.concert_spawn_at = now + random.uniform(90.0, 150.0)
+                        if hasattr(lista, 'pridat_floating_text'):
+                            msg = "Koncert! x5 prijem 20s"
+                            lista.pridat_floating_text(concert["x"] - 80, concert["y"] - 40, msg, (255, 215, 0), life=2.2)
+                        continue
+
                 task_action = lista.handle_task_panel_click(ui_pos) if hasattr(lista, 'handle_task_panel_click') else None
                 if task_action:
                     action, task_id = task_action
@@ -269,7 +286,7 @@ while running:
                     lista.combo_count = lista.combo_clicks
                     lista.combo_until = now + 1.2
 
-                    click_income = max(1, int(round(lista.sila_kliku * lista.combo_multiplier * get_rebirth_multiplier(lista))))
+                    click_income = max(1, int(round(lista.sila_kliku * lista.combo_multiplier * get_rebirth_multiplier(lista) * float(getattr(lista, 'concert_buff_mult', 1.0)))))
                     pridat_penize(lista, click_income)
                     if hasattr(lista, 'statistics') and isinstance(lista.statistics, dict):
                         lista.statistics['total_clicks'] = int(lista.statistics.get('total_clicks', 0)) + 1

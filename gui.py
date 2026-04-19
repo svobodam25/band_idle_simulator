@@ -1,6 +1,7 @@
 import pygame
 import time
 import math
+import random
 
 pygame.init()
 pygame.font.init()
@@ -101,6 +102,12 @@ class Lista():
         self.floating_font = pygame.font.SysFont(None, 28)
         self.combo_font = pygame.font.SysFont(None, 40)
         self.button_text = self.button_font.render("Koupit", True, (255, 255, 255))
+
+        self.concert_active = None
+        self.concert_buff_mult = 1.0
+        self.concert_buff_end = 0.0
+        self.concert_spawn_at = time.time() + random.uniform(45.0, 90.0)
+        self.concert_font = pygame.font.SysFont(None, 32, bold=True)
 
         self.singer_x = sirka // 2
         self.singer_y = 300
@@ -737,6 +744,28 @@ class Lista():
         self.task_panel_target_x = float((self.sirka - self.task_panel_w - 10) if self.task_panel_open else (self.sirka + 10))
         self.task_panel_x += (self.task_panel_target_x - self.task_panel_x) * 0.22
 
+        if self.concert_buff_mult > 1.0 and now >= self.concert_buff_end:
+            self.concert_buff_mult = 1.0
+
+        if self.concert_active is None and not self.menu_otevrene and not self.settings_otevrene and now >= self.concert_spawn_at:
+            radius = 55
+            margin = radius + 20
+            min_y = self.vyska + 80
+            max_y = max(min_y + 1, self.vyska_okna - margin - 220)
+            self.concert_active = {
+                "x": random.randint(margin, max(margin + 1, self.sirka - margin)),
+                "y": random.randint(min_y, max_y),
+                "radius": radius,
+                "spawn": now,
+                "life": 14.0,
+            }
+
+        if self.concert_active is not None:
+            elapsed = now - self.concert_active["spawn"]
+            if elapsed >= self.concert_active["life"]:
+                self.concert_active = None
+                self.concert_spawn_at = now + random.uniform(75.0, 150.0)
+
         if self.menu_otevrene and self.menu_vyska <= 0:
             self.menu_vyska = 0
 
@@ -1066,7 +1095,26 @@ class Lista():
                     jump_offset = 0 if animace_vypnute else abs(math.sin(t * 5 + i * 0.5 + row * 2.0)) * 20
                     audience_y = base_y - int(jump_offset)
                     okno.blit(self.audience_image, (audience_x, audience_y))
-        
+
+        if self.concert_active is not None and not self.menu_otevrene:
+            now_draw = time.time()
+            elapsed = now_draw - self.concert_active["spawn"]
+            life = self.concert_active["life"]
+            remaining = max(0.0, 1.0 - elapsed / life)
+            alpha = int(80 + 175 * remaining)
+            pulse = 1.0 + 0.08 * math.sin(now_draw * 6.0)
+            base_r = self.concert_active["radius"]
+            r = int(base_r * pulse)
+            cx = self.concert_active["x"]
+            cy = self.concert_active["y"]
+            surf_size = r * 2 + 20
+            surf = pygame.Surface((surf_size, surf_size), pygame.SRCALPHA)
+            pygame.draw.circle(surf, (255, 215, 0, alpha), (surf_size // 2, surf_size // 2), r)
+            pygame.draw.circle(surf, (180, 120, 0, alpha), (surf_size // 2, surf_size // 2), r, 4)
+            okno.blit(surf, (cx - surf_size // 2, cy - surf_size // 2))
+            label = self.concert_font.render(self._txt("concert_label") if False else "KONCERT", True, (60, 30, 0))
+            okno.blit(label, label.get_rect(center=(cx, cy)))
+
         pygame.draw.rect(okno, self.barva, (0, 0, self.sirka, self.vyska))
 
         okno.blit(self.logo_image, self.logo_rect)
