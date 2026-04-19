@@ -18,7 +18,7 @@ class Lista():
         self.sirka = sirka
         self.vyska_okna = vyska
         self.vyska = 100
-        self.penize = 10000000000000
+        self.penize = 0
         self.prijem = 0
         self.sila_kliku = 1
         self.kliknuti_historie = []
@@ -35,10 +35,12 @@ class Lista():
 
         self.menu_otevrene = False
         self.odrazu = 0
-        self.menu_vyska = 0 
+        self.menu_vyska = 0
         self.menu_max_vyska = vyska
-        self.menu_gravitace = 0.12
+        self.menu_gravitace = 0.35
         self.menu_rychlost = 0
+        self._last_menu_update = None
+        self._menu_physics_accum = 0.0
         self.menu_rect = pygame.Rect(self.sirka - 90, 20, 70, 60)
         
         self.kategorie = ["Členové", "Vylepšení", "Rebirth"]
@@ -322,7 +324,7 @@ class Lista():
         self.vol_btn_font = pygame.font.SysFont(None, 60)
         self.res_font = pygame.font.SysFont(None, 35)
 
-        self.menu_gravitace = 0.12 if self.vyska_okna <= 600 else 0.28
+        self.menu_gravitace = 0.5
 
         self.singer_x = self.sirka // 2
         self.singer_y = (self.vyska_okna // 2) + 100 if self.vyska_okna > 600 else self.vyska_okna // 2
@@ -735,28 +737,41 @@ class Lista():
         self.task_panel_target_x = float((self.sirka - self.task_panel_w - 10) if self.task_panel_open else (self.sirka + 10))
         self.task_panel_x += (self.task_panel_target_x - self.task_panel_x) * 0.22
 
-        if not self.menu_otevrene and self.menu_vyska >= 600:
-            self.menu_vyska = 600
         if self.menu_otevrene and self.menu_vyska <= 0:
             self.menu_vyska = 0
 
-        if 0 <=self.menu_vyska < self.menu_max_vyska and self.menu_otevrene:
-            self.menu_rychlost += self.menu_gravitace
-            self.menu_vyska += self.menu_rychlost
-            if self.menu_vyska > self.menu_max_vyska:
-                self.odrazu += 1
-                self.menu_vyska -= self.menu_rychlost
-                self.menu_rychlost = self.menu_rychlost * -0.5
+        if self._last_menu_update is None:
+            self._last_menu_update = now
+        dt = now - self._last_menu_update
+        self._last_menu_update = now
+        self._menu_physics_accum += min(max(dt, 0.0), 0.25)
+
+        fixed_step = 1.0 / 60.0
+        max_steps_per_frame = 20
+        steps = 0
+        while self._menu_physics_accum >= fixed_step and steps < max_steps_per_frame:
+            self._menu_physics_accum -= fixed_step
+            steps += 1
+
+            if 0 <= self.menu_vyska < self.menu_max_vyska and self.menu_otevrene:
+                self.menu_rychlost += self.menu_gravitace
                 self.menu_vyska += self.menu_rychlost
-                if self.odrazu >= 6:
-                    self.menu_vyska = self.menu_max_vyska
-        elif 0 < self.menu_vyska <= self.menu_max_vyska and not self.menu_otevrene:
-            nasobitel_zavirani = 5 if self.vyska_okna > 600 else 2
-            self.menu_rychlost -= self.menu_gravitace * nasobitel_zavirani
-            self.menu_vyska += self.menu_rychlost
-            if self.menu_vyska <= 0:
-                self.menu_vyska = 0
-                self.menu_rychlost = 0
+                if self.menu_vyska > self.menu_max_vyska:
+                    self.odrazu += 1
+                    self.menu_vyska -= self.menu_rychlost
+                    self.menu_rychlost = self.menu_rychlost * -0.5
+                    self.menu_vyska += self.menu_rychlost
+                    if self.odrazu >= 6:
+                        self.menu_vyska = self.menu_max_vyska
+            elif 0 < self.menu_vyska <= self.menu_max_vyska and not self.menu_otevrene:
+                self.menu_rychlost -= self.menu_gravitace * 2
+                self.menu_vyska += self.menu_rychlost
+                if self.menu_vyska <= 0:
+                    self.menu_vyska = 0
+                    self.menu_rychlost = 0
+
+        if steps >= max_steps_per_frame:
+            self._menu_physics_accum = 0.0
 
         # When animations are disabled, keep all performer scales static.
         if getattr(self, 'animations_disabled', False):
@@ -1012,13 +1027,22 @@ class Lista():
         if not self.menu_otevrene:
             t = time.time()
             animace_vypnute = getattr(self, 'animations_disabled', False)
-            
+
             je_full_hd = self.vyska_okna > 600
             pocet_rad = 2 if je_full_hd else 1
-            
-            spacing_x = 220 if je_full_hd else 100
-            pocet_fanousku = math.ceil(self.sirka / spacing_x) + 2
-            
+
+            spacing_x = 150 if je_full_hd else 70
+            pocet_fanousku = math.ceil(self.sirka / spacing_x) + 4
+
+            progress_income = max(0, int(getattr(self, 'prijem', 0)))
+            if progress_income <= 0:
+                fan_ratio = 0.0
+            else:
+                fan_ratio = min(1.0, math.log10(progress_income + 1) / 3.6)
+
+            fan_image_w = (218 * 1.8) if je_full_hd else 218
+            screen_center_x = self.sirka / 2.0
+
             for row in range(pocet_rad):
                 if not je_full_hd:
                     base_y = self.vyska_okna - 163
@@ -1026,15 +1050,18 @@ class Lista():
                 else:
                     base_y = self.vyska_okna - 330 + (row * 90)
                     shift_x = (row % 2) * 80
-                
+
                 for i in range(pocet_fanousku):
                     audience_x = (i * spacing_x) - 60 + shift_x
-                    
+                    fan_center_x = audience_x + fan_image_w / 2.0
+
                     if je_full_hd and row == 0:
-                        šírka_obrazku = 218 * 1.8
-                        stred_fanouska = audience_x + (šírka_obrazku / 2)
-                        if abs(stred_fanouska - self.sirka // 2) < 300:
+                        if abs(fan_center_x - screen_center_x) < 300:
                             continue
+
+                    dist_ratio = min(1.0, abs(fan_center_x - screen_center_x) / (self.sirka / 2.0))
+                    if dist_ratio > fan_ratio + 0.2:
+                        continue
 
                     jump_offset = 0 if animace_vypnute else abs(math.sin(t * 5 + i * 0.5 + row * 2.0)) * 20
                     audience_y = base_y - int(jump_offset)
