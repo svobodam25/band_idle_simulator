@@ -1013,13 +1013,10 @@ class Lista():
                     speed_mult *= 2.0
                 
                 if dist > 5:
-<<<<<<< HEAD
-                    self.sekuritak_x += (dx / dist) * speed_mult
-                    self.sekuritak_y += (dy / dist) * speed_mult
-=======
+
                     self.sekuritak_x += (dx / dist) * (2.0 * max(1.0, self.vyska_okna / 600.0))
                     self.sekuritak_y += (dy / dist) * (2.0 * max(1.0, self.vyska_okna / 600.0))
->>>>>>> origin/main
+
                     self.sekuritak_scale = 1.0 + math.sin(time.time() * 10) * 0.05
                 else:
                     # Dosal cile -> vyber novy nahodny cil, aby se neustale zastavoval
