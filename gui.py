@@ -136,16 +136,16 @@ class Lista():
         self.drummer_image = pygame.transform.scale(self.drummer_image, (drummer_scaled, drummer_scaled))
         self.drummer_rect = self.drummer_image.get_rect(center=(self.sirka // 4, self.singer_y - 30))
         self.drum_image = pygame.image.load("obrazky/docasne_buben.png")
-<<<<<<< HEAD
+
         self.drum_image = pygame.transform.smoothscale(self.drum_image, (300, 300))
         self.drum_rect = self.drum_image.get_rect(
             center=(self.drummer_rect.centerx + 30, self.drummer_rect.centery + 35)
         )
-=======
+
         drum_scaled = int(60 * self.character_scale)
         self.drum_image = pygame.transform.scale(self.drum_image, (drum_scaled, drum_scaled))
         self.drum_rect = self.drum_image.get_rect(center=(self.sirka // 4, self.singer_y + 80))
->>>>>>> origin/main
+
         self.drummer_active = False
 
         self.guitarist_image = pygame.image.load("obrazky/kytarista.png")
