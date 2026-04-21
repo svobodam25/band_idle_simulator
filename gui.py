@@ -131,8 +131,10 @@ class Lista():
         self.drummer_image = pygame.transform.scale(self.drummer_image, (200, 200))
         self.drummer_rect = self.drummer_image.get_rect(center=(self.sirka // 4, self.singer_y - 30))
         self.drum_image = pygame.image.load("obrazky/docasne_buben.png")
-        self.drum_image = pygame.transform.scale(self.drum_image, (60, 60))
-        self.drum_rect = self.drum_image.get_rect(center=(self.sirka // 4, self.singer_y + 80))
+        self.drum_image = pygame.transform.smoothscale(self.drum_image, (300, 300))
+        self.drum_rect = self.drum_image.get_rect(
+            center=(self.drummer_rect.centerx + 30, self.drummer_rect.centery + 35)
+        )
         self.drummer_active = False
 
         self.guitarist_image = pygame.image.load("obrazky/kytarista.png")
@@ -349,7 +351,9 @@ class Lista():
             dj_x = self.sirka - (self.sirka // 6)
 
         self.drummer_rect = self.drummer_image.get_rect(center=(drummer_x, self.singer_y - 30))
-        self.drum_rect = self.drum_image.get_rect(center=(drummer_x, self.singer_y + 80))
+        self.drum_rect = self.drum_image.get_rect(
+            center=(self.drummer_rect.centerx + 30, self.drummer_rect.centery + 35)
+        )
 
         self.guitarist_rect = self.guitarist_image.get_rect(center=(guitarist_x, self.singer_y - 30))
         self.pianist_rect = self.pianist_image.get_rect(center=(pianist_x, self.singer_y - 30))
@@ -891,13 +895,18 @@ class Lista():
             temp_drummer_rect = self.drummer_rect.copy()
             temp_drummer_rect.y += int(y_offset)
 
+            scaled_drummer_w = int(self.drummer_image.get_width() * scale)
+            scaled_drummer_h = int(self.drummer_image.get_height() * scale)
+            scaled_drummer = pygame.transform.smoothscale(self.drummer_image, (scaled_drummer_w, scaled_drummer_h))
+            temp_drummer_rect = scaled_drummer.get_rect(center=temp_drummer_rect.center)
+
             scaled_w = int(self.drum_image.get_width() * scale)
             scaled_h = int(self.drum_image.get_height() * scale)
             scaled_drum = pygame.transform.smoothscale(self.drum_image, (scaled_w, scaled_h))
             temp_drum_rect = scaled_drum.get_rect(center=self.drum_rect.center)
 
+            okno.blit(scaled_drummer, temp_drummer_rect)
             okno.blit(scaled_drum, temp_drum_rect)
-            okno.blit(self.drummer_image, temp_drummer_rect)
         
         if self.guitarist_active:
             scale = getattr(self, 'guitar_scale', 1.0)
