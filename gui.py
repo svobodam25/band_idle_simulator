@@ -113,7 +113,7 @@ class Lista():
         self.singer_x = sirka // 2
         self.singer_y = 300
         self.singer_image = pygame.image.load("obrazky/docasny_zpevak.png")
-        singer_scaled_size = int(280 * self.character_scale)
+        singer_scaled_size = int(350 * self.character_scale)
         self.singer_image = pygame.transform.scale(self.singer_image, (singer_scaled_size, singer_scaled_size))
         self.singer_rect = self.singer_image.get_rect(center=(self.singer_x, self.singer_y))
         self.singer_scale = 1.0
@@ -300,8 +300,8 @@ class Lista():
         self.vyska_okna = vyska
         self.menu_max_vyska = vyska
         
-        # Aktualizuj scale faktor pro postavy (agresivnější škálování)
-        self.character_scale = max(1.0, (sirka + vyska) / 1400.0)
+        # Aktualizuj scale faktor pro postavy (fixní základ, mírné škálování)
+        self.character_scale = 0.7 + (sirka / 4000.0)
         
         self.menu_rect = pygame.Rect(self.sirka - 90, 20, 70, 60)
         
