@@ -24,6 +24,7 @@ class Lista():
         self.sila_kliku = 1000
         self.kliknuti_historie = []
         self.font = pygame.font.SysFont(None, 60)
+        self.character_scale = 1.0 + (sirka - 800) / 3000.0  # Mírné škálování - max 1.37x
 
         self.rebirth_count = 0
         self.rebirth_requirement = 1_000_000
@@ -112,6 +113,8 @@ class Lista():
         self.singer_x = sirka // 2
         self.singer_y = 300
         self.singer_image = pygame.image.load("obrazky/docasny_zpevak.png")
+        singer_scaled_size = int(280 * self.character_scale)
+        self.singer_image = pygame.transform.scale(self.singer_image, (singer_scaled_size, singer_scaled_size))
         self.singer_rect = self.singer_image.get_rect(center=(self.singer_x, self.singer_y))
         self.singer_scale = 1.0
         self.singer_target_scale = 1.0
@@ -128,25 +131,30 @@ class Lista():
         self.logo_rect = self.logo_image.get_rect(center=(70, 50))
 
         self.drummer_image = pygame.image.load("obrazky/bubenik.png")
-        self.drummer_image = pygame.transform.scale(self.drummer_image, (200, 200))
+        drummer_scaled = int(200 * self.character_scale)
+        self.drummer_image = pygame.transform.scale(self.drummer_image, (drummer_scaled, drummer_scaled))
         self.drummer_rect = self.drummer_image.get_rect(center=(self.sirka // 4, self.singer_y - 30))
         self.drum_image = pygame.image.load("obrazky/docasne_buben.png")
-        self.drum_image = pygame.transform.scale(self.drum_image, (60, 60))
+        drum_scaled = int(60 * self.character_scale)
+        self.drum_image = pygame.transform.scale(self.drum_image, (drum_scaled, drum_scaled))
         self.drum_rect = self.drum_image.get_rect(center=(self.sirka // 4, self.singer_y + 80))
         self.drummer_active = False
 
         self.guitarist_image = pygame.image.load("obrazky/kytarista.png")
-        self.guitarist_image = pygame.transform.scale(self.guitarist_image, (200, 200))
+        guitarist_scaled = int(200 * self.character_scale)
+        self.guitarist_image = pygame.transform.scale(self.guitarist_image, (guitarist_scaled, guitarist_scaled))
         self.guitarist_rect = self.guitarist_image.get_rect(center=(self.sirka - (self.sirka // 4), self.singer_y - 30))
         self.guitarist_active = False
 
         self.pianist_image = pygame.image.load("obrazky/pianista.png")
-        self.pianist_image = pygame.transform.scale(self.pianist_image, (200, 200))
+        pianist_scaled = int(200 * self.character_scale)
+        self.pianist_image = pygame.transform.scale(self.pianist_image, (pianist_scaled, pianist_scaled))
         self.pianist_rect = self.pianist_image.get_rect(center=(self.sirka // 6, self.singer_y - 30))
         self.pianist_active = False
 
         self.dj_image = pygame.image.load("obrazky/DJ.png")
-        self.dj_image = pygame.transform.scale(self.dj_image, (200, 200))
+        dj_scaled = int(200 * self.character_scale)
+        self.dj_image = pygame.transform.scale(self.dj_image, (dj_scaled, dj_scaled))
         self.dj_rect = self.dj_image.get_rect(center=(self.sirka - (self.sirka // 6), self.singer_y - 30))
         self.dj_active = False
 
@@ -155,7 +163,9 @@ class Lista():
             self.mikrofon_image = pygame.image.load("obrazky/mikrofon.png")
             mic_w = self.mikrofon_image.get_width()
             mic_h = self.mikrofon_image.get_height()
-            self.mikrofon_image = pygame.transform.smoothscale(self.mikrofon_image, (int(mic_w * 0.5), int(mic_h * 0.5)))
+            mic_scaled_w = int(mic_w * 0.5 * self.character_scale)
+            mic_scaled_h = int(mic_h * 0.5 * self.character_scale)
+            self.mikrofon_image = pygame.transform.smoothscale(self.mikrofon_image, (mic_scaled_w, mic_scaled_h))
         except:
             self.mikrofon_image = pygame.Surface((30, 80), pygame.SRCALPHA)
         self.mikrofon_rect = self.mikrofon_image.get_rect(center=(self.singer_x - 40, self.singer_y + 70))
@@ -290,6 +300,9 @@ class Lista():
         self.vyska_okna = vyska
         self.menu_max_vyska = vyska
         
+        # Aktualizuj scale faktor pro postavy (agresivnější škálování)
+        self.character_scale = max(1.0, (sirka + vyska) / 1400.0)
+        
         self.menu_rect = pygame.Rect(self.sirka - 90, 20, 70, 60)
         
         settings_w = 640
@@ -336,6 +349,15 @@ class Lista():
         self.singer_x = self.sirka // 2
         self.singer_y = (self.vyska_okna // 2) + 100 if self.vyska_okna > 600 else self.vyska_okna // 2
         self.singer_rect = self.singer_image.get_rect(center=(self.singer_x, self.singer_y))
+        
+        # Škáluj zpěváka na základě velikosti okna
+        singer_size = int(280 * self.character_scale)
+        try:
+            singer_original = pygame.image.load("obrazky/docasny_zpevak.png")
+            self.singer_image = pygame.transform.scale(singer_original, (singer_size, singer_size))
+        except:
+            pass
+        self.singer_rect = self.singer_image.get_rect(center=(self.singer_x, self.singer_y))
 
         if self.vyska_okna <= 600:
             drummer_x = int(self.sirka * 0.30)
@@ -351,6 +373,50 @@ class Lista():
         self.drummer_rect = self.drummer_image.get_rect(center=(drummer_x, self.singer_y - 30))
         self.drum_rect = self.drum_image.get_rect(center=(drummer_x, self.singer_y + 80))
 
+        self.guitarist_rect = self.guitarist_image.get_rect(center=(guitarist_x, self.singer_y - 30))
+        self.pianist_rect = self.pianist_image.get_rect(center=(pianist_x, self.singer_y - 30))
+        self.dj_rect = self.dj_image.get_rect(center=(dj_x, self.singer_y - 30))
+        
+        # Škáluj obrázky postav na základě velikosti okna (ale zachovej pozici)
+        drummer_size = int(200 * self.character_scale)
+        guitarist_size = int(200 * self.character_scale)
+        pianist_size = int(200 * self.character_scale)
+        dj_size = int(200 * self.character_scale)
+        drum_size = int(60 * self.character_scale)
+        
+        try:
+            drummer_original = pygame.image.load("obrazky/bubenik.png")
+            self.drummer_image = pygame.transform.scale(drummer_original, (drummer_size, drummer_size))
+        except:
+            pass
+        
+        try:
+            guitarist_original = pygame.image.load("obrazky/kytarista.png")
+            self.guitarist_image = pygame.transform.scale(guitarist_original, (guitarist_size, guitarist_size))
+        except:
+            pass
+        
+        try:
+            pianist_original = pygame.image.load("obrazky/pianista.png")
+            self.pianist_image = pygame.transform.scale(pianist_original, (pianist_size, pianist_size))
+        except:
+            pass
+        
+        try:
+            dj_original = pygame.image.load("obrazky/DJ.png")
+            self.dj_image = pygame.transform.scale(dj_original, (dj_size, dj_size))
+        except:
+            pass
+        
+        try:
+            drum_original = pygame.image.load("obrazky/docasne_buben.png")
+            self.drum_image = pygame.transform.scale(drum_original, (drum_size, drum_size))
+        except:
+            pass
+        
+        # Nastav rect pro škálované obrázky (zachovej pozici)
+        self.drummer_rect = self.drummer_image.get_rect(center=(drummer_x, self.singer_y - 30))
+        self.drum_rect = self.drum_image.get_rect(center=(drummer_x, self.singer_y + 80))
         self.guitarist_rect = self.guitarist_image.get_rect(center=(guitarist_x, self.singer_y - 30))
         self.pianist_rect = self.pianist_image.get_rect(center=(pianist_x, self.singer_y - 30))
         self.dj_rect = self.dj_image.get_rect(center=(dj_x, self.singer_y - 30))
@@ -1359,9 +1425,6 @@ class Lista():
     def _draw_scrollbar(self, okno):
         """Draw scrollbar on the right side of the menu"""
         if self.menu_vyska <= 0:
-            return
-        
-        if self.menu_vyska < self.menu_max_vyska * 0.999:
             return
         
         aktualni = self.menu_items[self.aktivni_kategorie]

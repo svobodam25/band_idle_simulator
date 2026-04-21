@@ -150,9 +150,9 @@ def vypocitat_vydelky(l):
     # Role economics: drummer = +3 $/s per level, guitarist = +5 $/s per level,
     # pianist = +6 $/s per level, DJ = buff + stredni vlastni tick.
     drum_tick_income = int(round((1.8 + levels.get(1, 0) * 1.8) * total_mult * rebirth_mult))
-    guitar_burst_income = int(round((20.0 + levels.get(2, 0) * 18.0) * total_mult * rebirth_mult))
+    guitar_burst_income = int(round((20.0 + levels.get(2, 0) * 20.0) * total_mult * rebirth_mult))
     piano_tick_income = int(round((3.0 + levels.get(5, 0) * 3.0) * total_mult * rebirth_mult))
-    dj_tick_income = int(round((4.0 + levels.get(6, 0) * 2.2) * total_mult * rebirth_mult * concert_mult))
+    dj_tick_income = int(round((4.0 + levels.get(6, 0) * 2.2) * total_mult * rebirth_mult))
 
     drum_tick_income = max(1, drum_tick_income)
     guitar_burst_income = max(1, guitar_burst_income)
