@@ -1,7 +1,11 @@
+import os
 import pygame
 import sys
 import time
 import random
+
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
 pygame.init()
 
 import gui
