@@ -136,15 +136,11 @@ class Lista():
         self.drummer_image = pygame.transform.scale(self.drummer_image, (drummer_scaled, drummer_scaled))
         self.drummer_rect = self.drummer_image.get_rect(center=(self.sirka // 4, self.singer_y - 30))
         self.drum_image = pygame.image.load("obrazky/docasne_buben.png")
-
-        self.drum_image = pygame.transform.smoothscale(self.drum_image, (300, 300))
+        drum_scaled = int(300 * self.character_scale)
+        self.drum_image = pygame.transform.smoothscale(self.drum_image, (drum_scaled, drum_scaled))
         self.drum_rect = self.drum_image.get_rect(
             center=(self.drummer_rect.centerx + 30, self.drummer_rect.centery + 35)
         )
-
-        drum_scaled = int(60 * self.character_scale)
-        self.drum_image = pygame.transform.scale(self.drum_image, (drum_scaled, drum_scaled))
-        self.drum_rect = self.drum_image.get_rect(center=(self.sirka // 4, self.singer_y + 80))
 
         self.drummer_active = False
 
@@ -415,7 +411,7 @@ class Lista():
         guitarist_size = int(200 * self.character_scale)
         pianist_size = int(200 * self.character_scale)
         dj_size = int(200 * self.character_scale)
-        drum_size = int(60 * self.character_scale)
+        drum_size = int(300 * self.character_scale)
         
         try:
             drummer_original = pygame.image.load("obrazky/bubenik.png")
@@ -449,7 +445,9 @@ class Lista():
         
         # Nastav rect pro škálované obrázky (zachovej pozici)
         self.drummer_rect = self.drummer_image.get_rect(center=(drummer_x, self.singer_y - 30))
-        self.drum_rect = self.drum_image.get_rect(center=(drummer_x, self.singer_y + 80))
+        self.drum_rect = self.drum_image.get_rect(
+            center=(self.drummer_rect.centerx + 30, self.drummer_rect.centery + 35)
+        )
         self.guitarist_rect = self.guitarist_image.get_rect(center=(guitarist_x, self.singer_y - 30))
         self.pianist_rect = self.pianist_image.get_rect(center=(pianist_x, self.singer_y - 30))
         self.dj_rect = self.dj_image.get_rect(center=(dj_x, self.singer_y - 30))
@@ -1055,7 +1053,9 @@ class Lista():
             scaled_w = int(self.drum_image.get_width() * scale)
             scaled_h = int(self.drum_image.get_height() * scale)
             scaled_drum = pygame.transform.smoothscale(self.drum_image, (scaled_w, scaled_h))
-            temp_drum_rect = scaled_drum.get_rect(center=self.drum_rect.center)
+            temp_drum_rect = scaled_drum.get_rect(
+                center=(self.drum_rect.centerx, self.drum_rect.centery + int(y_offset))
+            )
 
             okno.blit(scaled_drummer, temp_drummer_rect)
             okno.blit(scaled_drum, temp_drum_rect)
