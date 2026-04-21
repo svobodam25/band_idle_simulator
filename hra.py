@@ -4,6 +4,10 @@ import sys
 import time
 import random
 
+try:
+    pygame.mixer.init()
+except pygame.error:
+    os.environ['SDL_AUDIODRIVER'] = 'dummy'
 pygame.init()
 
 import gui
@@ -393,6 +397,8 @@ while running:
                                         elif i == 4:
                                             lista.dj_active = True
                                             aktualizovat_ukol(lista, "buy_dj", value=1)
+                                        elif i == 5:
+                                            lista.sekuritak_active = True
                                             
                                     elif lista.aktivni_kategorie == "Vylepšení":
                                         lista.item_prices["Vylepšení"][i] *= 3
