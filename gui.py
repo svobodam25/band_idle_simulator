@@ -953,6 +953,31 @@ class Lista():
         if getattr(self, 'sekuritak_active', False):
             import math
             import random
+            
+            if not hasattr(self, 'last_sekuritak_fight'):
+                self.last_sekuritak_fight = time.time()
+                
+            if time.time() - self.last_sekuritak_fight >= 5.0:
+                self.sekuritak_fight_time = time.time() + 1.0
+                self.last_sekuritak_fight = time.time()
+                self.penize += 100
+                
+                # Zkusime zavolat pridat_penize z hrace, pokud ale neni dostupna mame self.penize
+                # Plus nejake statistiky jestli chceme. Zde ale to floatuje na obrazovku.
+                if hasattr(self, 'pridat_floating_text'):
+                    self.pridat_floating_text(
+                        self.sekuritak_x + 40, 
+                        self.sekuritak_y - 20, 
+                        "+100$", 
+                        (255, 0, 0), 
+                        life=1.0
+                    )
+                if hasattr(self, 'sekuritak_sound') and self.sekuritak_sound:
+                    ch = pygame.mixer.find_channel(True)
+                    if ch:
+                        ch.set_volume(self.hlasitost ** 2)
+                        ch.play(self.sekuritak_sound)
+                        
             dx = getattr(self, 'sekuritak_cile_x', self.sekuritak_x) - self.sekuritak_x
             dy = getattr(self, 'sekuritak_cile_y', self.sekuritak_y) - self.sekuritak_y
             
@@ -970,13 +995,6 @@ class Lista():
                     if random.random() < 0.01:
                         self.sekuritak_cile_x = random.randint(50, self.sirka - 50)
                         self.sekuritak_cile_y = random.randint(self.vyska_okna - 250, self.vyska_okna - 50)
-                    elif random.random() < 0.005:
-                        self.sekuritak_fight_time = time.time() + 1.0
-                        if hasattr(self, 'sekuritak_sound') and self.sekuritak_sound:
-                            ch = pygame.mixer.find_channel(True)
-                            if ch:
-                                ch.set_volume(self.hlasitost ** 2)
-                                ch.play(self.sekuritak_sound)
 
         if abs(self.singer_scale - self.singer_target_scale) > 0.01:
             self.singer_scale += (self.singer_target_scale - self.singer_scale) * self.singer_animation_speed
