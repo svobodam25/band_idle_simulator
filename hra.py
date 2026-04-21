@@ -296,6 +296,15 @@ while running:
                     lista.combo_count = lista.combo_clicks
                     lista.combo_until = now + 1.2
 
+                    # Zrychlení sekuriťáka a snížení cooldownu při klikání
+                    if getattr(lista, 'sekuritak_active', False):
+                        # Zrychlí pohyb (přidáme k aktuálnímu posunu v update)
+                        # V gui.py je pohyb 2.0, zvýšíme to efektivně v update, 
+                        # ale zde můžeme ovlivnit cooldownu fightu nebo rychlosty.
+                        # Pro cooldownu fightu: zkrátíme čas do dalšího útoku
+                        if hasattr(lista, 'last_sekuritak_fight'):
+                            lista.last_sekuritak_fight -= 0.2 # Sníží cooldown o 0.2s za kliknutí
+
                     click_income = max(1, int(round(lista.sila_kliku * lista.combo_multiplier * get_rebirth_multiplier(lista) * float(getattr(lista, 'concert_buff_mult', 1.0)))))
                     pridat_penize(lista, click_income)
                     if hasattr(lista, 'statistics') and isinstance(lista.statistics, dict):

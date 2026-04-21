@@ -993,11 +993,20 @@ class Lista():
                 self.sekuritak_scale = 1.0 + math.sin(time.time() * 25) * 0.2
             else:
                 dist = math.hypot(dx, dy)
+                # Rychlost pohybu ovlivnena kombem (pokud je aktivni, pohybuje se rychleji)
+                speed_mult = 2.0
+                if hasattr(self, 'combo_multiplier') and self.combo_multiplier > 1.0:
+                    speed_mult *= 2.0
+                
                 if dist > 5:
-                    self.sekuritak_x += (dx / dist) * 2.0
-                    self.sekuritak_y += (dy / dist) * 2.0
+                    self.sekuritak_x += (dx / dist) * speed_mult
+                    self.sekuritak_y += (dy / dist) * speed_mult
                     self.sekuritak_scale = 1.0 + math.sin(time.time() * 10) * 0.05
                 else:
+                    # Dosal cile -> vyber novy nahodny cil, aby se neustale zastavoval
+                    self.sekuritak_cile_x = random.randint(50, self.sirka - 50)
+                    self.sekuritak_cile_y = random.randint(self.vyska_okna // 2, self.vyska_okna - 50)
+                    self.sekuritak_scale = 1.0
                     self.sekuritak_scale = 1.0
                     if random.random() < 0.01:
                         self.sekuritak_cile_x = random.randint(50, self.sirka - 50)
