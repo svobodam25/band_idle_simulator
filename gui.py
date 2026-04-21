@@ -49,23 +49,13 @@ class Lista():
         self.aktivni_kategorie = "Členové"
 
         self.menu_items = {
-<<<<<<< HEAD
             "Členové": ["Mikrofon", "Bubeník", "Kytarista", "Pianista", "DJ", "Sekuriťák", "Položka 7"],
-            "Vylepšení": ["Zlaté hlasivky (+1 Klik)", "Lepší paličky (+2 $/s)", "Lepší trsátko (+5 $/s)", "Těžké basy (+8 $/s)", "Lepší mikrofon (+5 Klik)", "Lepší klávesy (+6 $/s)", "Lepší mix pult (+8 $/s)"],
-            "Rebirth": ["Reset runu, trvale 2x prijem"]
-        }
-        self.menu_items_en = {
-            "Členové": ["Microphone", "Drummer", "Guitarist", "Pianist", "DJ", "Security Guard", "Item 7"],
-            "Vylepšení": ["Golden Vocal Cords (+1 Click)", "Better Drumsticks (+2 $/s)", "Better Pick (+5 $/s)", "Heavy Bass (+8 $/s)", "Better Microphone (+5 Click)", "Better Keys (+6 $/s)", "Better Mixer (+8 $/s)"],
-=======
-            "Členové": ["Mikrofon", "Bubeník", "Kytarista", "Pianista", "DJ", "Položka 6", "Položka 7"],
             "Vylepšení": ["Zlaté hlasivky (+1 Klik)", "Lepší paličky (+3 $/s)", "Lepší trsátko (+5 $/s)", "Těžké basy (+8 $/s)", "Lepší mikrofon (+5 Klik)", "Lepší klávesy (+6 $/s)", "Lepší mix pult (+8 $/s)"],
             "Rebirth": ["Reset runu, trvale 2x prijem"]
         }
         self.menu_items_en = {
-            "Členové": ["Microphone", "Drummer", "Guitarist", "Pianist", "DJ", "Item 6", "Item 7"],
+            "Členové": ["Microphone", "Drummer", "Guitarist", "Pianist", "DJ", "Security Guard", "Item 7"],
             "Vylepšení": ["Golden Vocal Cords (+1 Click)", "Better Drumsticks (+3 $/s)", "Better Pick (+5 $/s)", "Heavy Bass (+8 $/s)", "Better Microphone (+5 Click)", "Better Keys (+6 $/s)", "Better Mixer (+8 $/s)"],
->>>>>>> origin/main
             "Rebirth": ["Reset run, permanent 2x income"]
         }
         self.item_prices = {
