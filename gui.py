@@ -136,12 +136,19 @@ class Lista():
         self.drummer_image = pygame.transform.scale(self.drummer_image, (drummer_scaled, drummer_scaled))
         self.drummer_rect = self.drummer_image.get_rect(center=(self.sirka // 4, self.singer_y - 30))
         self.drum_image = pygame.image.load("obrazky/docasne_buben.png")
+<<<<<<< HEAD
+        self.drum_image = pygame.transform.smoothscale(self.drum_image, (300, 300))
+        self.drum_rect = self.drum_image.get_rect(
+            center=(self.drummer_rect.centerx + 30, self.drummer_rect.centery + 35)
+        )
+=======
         drum_scaled = int(300 * self.character_scale)
         self.drum_image = pygame.transform.smoothscale(self.drum_image, (drum_scaled, drum_scaled))
         self.drum_rect = self.drum_image.get_rect(
             center=(self.drummer_rect.centerx + 30, self.drummer_rect.centery + 35)
         )
 
+>>>>>>> origin/main
         self.drummer_active = False
 
         self.guitarist_image = pygame.image.load("obrazky/kytarista.png")
@@ -985,8 +992,19 @@ class Lista():
                         ch.set_volume(self.hlasitost ** 2)
                         ch.play(self.sekuritak_sound)
                         
-            dx = getattr(self, 'sekuritak_cile_x', self.sekuritak_x) - self.sekuritak_x
-            dy = getattr(self, 'sekuritak_cile_y', self.sekuritak_y) - self.sekuritak_y
+            pad = 100
+            y_min = int(self.vyska_okna * 0.65)
+            y_max = self.vyska_okna - 50
+            
+            # Bezpecnostni uprava pro stare ulozene pozice i soucasnou pozici
+            self.sekuritak_cile_x = max(pad, min(getattr(self, 'sekuritak_cile_x', self.sekuritak_x), self.sirka - pad))
+            self.sekuritak_cile_y = max(y_min, min(getattr(self, 'sekuritak_cile_y', self.sekuritak_y), y_max))
+            
+            self.sekuritak_x = max(pad, min(self.sekuritak_x, self.sirka - pad))
+            self.sekuritak_y = max(y_min, min(self.sekuritak_y, y_max))
+            
+            dx = self.sekuritak_cile_x - self.sekuritak_x
+            dy = self.sekuritak_cile_y - self.sekuritak_y
             
             if time.time() < getattr(self, 'sekuritak_fight_time', 0):
                 # Bojuje - tuka rukama (zvetsuje/zmensuje)
@@ -999,8 +1017,13 @@ class Lista():
                     speed_mult *= 2.0
                 
                 if dist > 5:
+<<<<<<< HEAD
                     self.sekuritak_x += (dx / dist) * speed_mult
                     self.sekuritak_y += (dy / dist) * speed_mult
+=======
+                    self.sekuritak_x += (dx / dist) * (2.0 * max(1.0, self.vyska_okna / 600.0))
+                    self.sekuritak_y += (dy / dist) * (2.0 * max(1.0, self.vyska_okna / 600.0))
+>>>>>>> origin/main
                     self.sekuritak_scale = 1.0 + math.sin(time.time() * 10) * 0.05
                 else:
                     # Dosal cile -> vyber novy nahodny cil, aby se neustale zastavoval
@@ -1008,19 +1031,13 @@ class Lista():
                     self.sekuritak_cile_y = random.randint(self.vyska_okna // 2, self.vyska_okna - 50)
                     self.sekuritak_scale = 1.0
                     self.sekuritak_scale = 1.0
+                    # Zhruba 1 % šance na start cesty na snímek (když dorazí do cíle, chvíli si tam postojí)
                     if random.random() < 0.01:
-                        self.sekuritak_cile_x = random.randint(50, self.sirka - 50)
-                        self.sekuritak_cile_y = random.randint(self.vyska_okna - 250, self.vyska_okna - 50)
-
-        if abs(self.singer_scale - self.singer_target_scale) > 0.01:
-            self.singer_scale += (self.singer_target_scale - self.singer_scale) * self.singer_animation_speed
-        else:
-            self.singer_scale = self.singer_target_scale
-            if abs(self.singer_target_scale - 1.15) < 0.01 and abs(self.singer_scale - 1.15) < 0.01:
-                self.singer_target_scale = 0.85
-            elif abs(self.singer_target_scale - 0.85) < 0.01 and abs(self.singer_scale - 0.85) < 0.01:
-                self.singer_target_scale = 1.0
-
+                        pad = 100
+                        y_min = int(self.vyska_okna * 0.65)
+                        y_max = self.vyska_okna - 50
+                        self.sekuritak_cile_x = random.randint(pad, max(pad, self.sirka - pad))
+                        self.sekuritak_cile_y = random.randint(min(y_min, y_max), max(y_min, y_max))
 
         if abs(self.singer_scale - self.singer_target_scale) > 0.01:
             self.singer_scale += (self.singer_target_scale - self.singer_scale) * self.singer_animation_speed
@@ -1112,14 +1129,19 @@ class Lista():
             okno.blit(scaled_dj, temp_dj_rect)
 
         if self.sekuritak_active:
-            scale = self.sekuritak_scale
+            scale = self.sekuritak_scale * (self.vyska_okna / 600.0)
             scaled_w = int(self.sekuritak_image.get_width() * scale)
             scaled_h = int(self.sekuritak_image.get_height() * scale)
             scaled_img = pygame.transform.smoothscale(self.sekuritak_image, (scaled_w, scaled_h))
+            
+            # Oprava aby nevyjizdel z mapy (omezeni na sirku a vysku okna)
+            self.sekuritak_x = max(scaled_w // 2, min(self.sekuritak_x, self.sirka - scaled_w // 2))
+            self.sekuritak_y = max(scaled_h // 2, min(self.sekuritak_y, self.vyska_okna - scaled_h // 2))
+            
             rect = scaled_img.get_rect(center=(int(self.sekuritak_x), int(self.sekuritak_y)))
             okno.blit(scaled_img, rect)
             
-            if time.time() < self.sekuritak_fight_time:
+            if time.time() < getattr(self, 'sekuritak_fight_time', 0):
                 # Kreslit nejaky BAF efekt
                 fight_font = pygame.font.SysFont(None, 40, bold=True)
                 fight_text = fight_font.render("BUM!", True, (255, 50, 50))
@@ -1485,7 +1507,10 @@ class Lista():
             okno.blit(text_surface, pos)
 
     def _draw_daily_tasks(self, okno):
-        pygame.draw.rect(okno, (40, 40, 40), self.btn_tasks_toggle, border_radius=8)
+        has_unclaimed = any(t.get("completed", False) and not t.get("claimed", False) for t in getattr(self, 'daily_tasks', []))
+        bg_color = (40, 160, 40) if has_unclaimed else (40, 40, 40)
+        
+        pygame.draw.rect(okno, bg_color, self.btn_tasks_toggle, border_radius=8)
         pygame.draw.rect(okno, (230, 230, 230), self.btn_tasks_toggle, 1, border_radius=8)
         toggle_text = self.task_font.render(self._txt("tasks"), True, (255, 255, 255))
         okno.blit(toggle_text, toggle_text.get_rect(center=self.btn_tasks_toggle.center))
