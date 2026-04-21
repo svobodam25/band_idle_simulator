@@ -22,7 +22,7 @@ class Lista():
         self.vyska = 100
         self.penize = 0
         self.prijem = 0
-        self.sila_kliku = 1
+        self.sila_kliku = 1000
         self.kliknuti_historie = []
         self.font = pygame.font.SysFont(None, 60)
 
@@ -49,6 +49,7 @@ class Lista():
         self.aktivni_kategorie = "Členové"
 
         self.menu_items = {
+<<<<<<< HEAD
             "Členové": ["Mikrofon", "Bubeník", "Kytarista", "Pianista", "DJ", "Sekuriťák", "Položka 7"],
             "Vylepšení": ["Zlaté hlasivky (+1 Klik)", "Lepší paličky (+2 $/s)", "Lepší trsátko (+5 $/s)", "Těžké basy (+8 $/s)", "Lepší mikrofon (+5 Klik)", "Lepší klávesy (+6 $/s)", "Lepší mix pult (+8 $/s)"],
             "Rebirth": ["Reset runu, trvale 2x prijem"]
@@ -56,6 +57,15 @@ class Lista():
         self.menu_items_en = {
             "Členové": ["Microphone", "Drummer", "Guitarist", "Pianist", "DJ", "Security Guard", "Item 7"],
             "Vylepšení": ["Golden Vocal Cords (+1 Click)", "Better Drumsticks (+2 $/s)", "Better Pick (+5 $/s)", "Heavy Bass (+8 $/s)", "Better Microphone (+5 Click)", "Better Keys (+6 $/s)", "Better Mixer (+8 $/s)"],
+=======
+            "Členové": ["Mikrofon", "Bubeník", "Kytarista", "Pianista", "DJ", "Položka 6", "Položka 7"],
+            "Vylepšení": ["Zlaté hlasivky (+1 Klik)", "Lepší paličky (+3 $/s)", "Lepší trsátko (+5 $/s)", "Těžké basy (+8 $/s)", "Lepší mikrofon (+5 Klik)", "Lepší klávesy (+6 $/s)", "Lepší mix pult (+8 $/s)"],
+            "Rebirth": ["Reset runu, trvale 2x prijem"]
+        }
+        self.menu_items_en = {
+            "Členové": ["Microphone", "Drummer", "Guitarist", "Pianist", "DJ", "Item 6", "Item 7"],
+            "Vylepšení": ["Golden Vocal Cords (+1 Click)", "Better Drumsticks (+3 $/s)", "Better Pick (+5 $/s)", "Heavy Bass (+8 $/s)", "Better Microphone (+5 Click)", "Better Keys (+6 $/s)", "Better Mixer (+8 $/s)"],
+>>>>>>> origin/main
             "Rebirth": ["Reset run, permanent 2x income"]
         }
         self.item_prices = {
@@ -66,7 +76,7 @@ class Lista():
         self.bought_items = {"Členové": set(), "Vylepšení": set(), "Rebirth": set()}
         self.upgrade_tooltips = {
             0: "Silnejsi hlas: +1 klik.",
-            1: "Bubenik boost: +2 $/s (jen kdyz je aktivni).",
+            1: "Bubenik boost: +3 $/s (jen kdyz je aktivni).",
             2: "Kytara boost: +5 $/s (jen kdyz je aktivni).",
             3: "Bass boost: +8 $/s.",
             4: "Silnejsi mikrofon: +5 klik.",
@@ -75,7 +85,7 @@ class Lista():
         }
         self.upgrade_tooltips_en = {
             0: "Stronger voice: +1 click.",
-            1: "Drummer boost: +2 $/s (only when active).",
+            1: "Drummer boost: +3 $/s (only when active).",
             2: "Guitar boost: +5 $/s (only when active).",
             3: "Bass boost: +8 $/s.",
             4: "Stronger mic: +5 click.",
