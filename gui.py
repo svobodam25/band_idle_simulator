@@ -3,12 +3,13 @@ import time
 import math
 import random
 
-pygame.init()
-pygame.font.init()
 try:
     pygame.mixer.init()
-except Exception as e:
-    print("Zvuk nemohl být inicializován:", e)
+except pygame.error:
+    import os
+    os.environ['SDL_AUDIODRIVER'] = 'dummy'
+pygame.init()
+pygame.font.init()
 
 penize_font = pygame.font.SysFont(None, 60)
 prijem_font = pygame.font.SysFont(None, 36)
@@ -49,12 +50,12 @@ class Lista():
         self.aktivni_kategorie = "Členové"
 
         self.menu_items = {
-            "Členové": ["Mikrofon", "Bubeník", "Kytarista", "Pianista", "DJ", "Položka 6", "Položka 7"],
+            "Členové": ["Mikrofon", "Bubeník", "Kytarista", "Pianista", "DJ", "Sekuriťák", "Položka 7"],
             "Vylepšení": ["Zlaté hlasivky (+1 Klik)", "Lepší paličky (+3 $/s)", "Lepší trsátko (+5 $/s)", "Těžké basy (+8 $/s)", "Lepší mikrofon (+5 Klik)", "Lepší klávesy (+6 $/s)", "Lepší mix pult (+8 $/s)"],
             "Rebirth": ["Reset runu, trvale 2x prijem"]
         }
         self.menu_items_en = {
-            "Členové": ["Microphone", "Drummer", "Guitarist", "Pianist", "DJ", "Item 6", "Item 7"],
+            "Členové": ["Microphone", "Drummer", "Guitarist", "Pianist", "DJ", "Security Guard", "Item 7"],
             "Vylepšení": ["Golden Vocal Cords (+1 Click)", "Better Drumsticks (+3 $/s)", "Better Pick (+5 $/s)", "Heavy Bass (+8 $/s)", "Better Microphone (+5 Click)", "Better Keys (+6 $/s)", "Better Mixer (+8 $/s)"],
             "Rebirth": ["Reset run, permanent 2x income"]
         }
@@ -157,6 +158,7 @@ class Lista():
         self.dj_image = pygame.transform.scale(self.dj_image, (dj_scaled, dj_scaled))
         self.dj_rect = self.dj_image.get_rect(center=(self.sirka - (self.sirka // 6), self.singer_y - 30))
         self.dj_active = False
+        self.sekuritak_active = False
 
         self.mikrofon_active = False
         try:
@@ -170,6 +172,21 @@ class Lista():
             self.mikrofon_image = pygame.Surface((30, 80), pygame.SRCALPHA)
         self.mikrofon_rect = self.mikrofon_image.get_rect(center=(self.singer_x - 40, self.singer_y + 70))
         
+        try:
+            img = pygame.image.load("obrazky/kotlar.png")
+            w = img.get_width()
+            h = img.get_height()
+            self.sekuritak_image = pygame.transform.smoothscale(img, (int(w * 0.45), int(h * 0.45)))
+        except:
+            self.sekuritak_image = pygame.Surface((80, 80))
+            self.sekuritak_image.fill((200, 0, 0))
+        self.sekuritak_x = 100.0
+        self.sekuritak_y = self.vyska_okna - 100.0
+        self.sekuritak_cile_x = 100.0
+        self.sekuritak_cile_y = self.vyska_okna - 100.0
+        self.sekuritak_scale = 1.0
+        self.sekuritak_fight_time = 0.0
+
         self.hlasitost = 0.5 
 
         self.guitar_scale = 1.0
@@ -211,6 +228,13 @@ class Lista():
         except Exception as e:
             print("Chyba při načítání dj.wav:", e)
             self.dj_sound = None
+
+        try:
+            self.sekuritak_sound = pygame.mixer.Sound("zvuky/kotlar.wav")
+            self.sekuritak_sound.set_volume(self.hlasitost ** 2)
+        except Exception as e:
+            print("Chyba při načítání kotlar.wav:", e)
+            self.sekuritak_sound = None
 
         self.button_text_disabled = self.button_font.render("Koupit", True, (100, 100, 100))
 
@@ -447,10 +471,14 @@ class Lista():
         
         real_volume = self.hlasitost ** 2
         
+        if not pygame.mixer.get_init():
+            return
+            
         if hasattr(self, 'drum_sound') and self.drum_sound: self.drum_sound.set_volume(real_volume)
         if hasattr(self, 'guitar_sound') and self.guitar_sound: self.guitar_sound.set_volume(real_volume)
         if hasattr(self, 'piano_sound') and self.piano_sound: self.piano_sound.set_volume(real_volume)
         if hasattr(self, 'dj_sound') and self.dj_sound: self.dj_sound.set_volume(real_volume)
+        if hasattr(self, 'sekuritak_sound') and self.sekuritak_sound: self.sekuritak_sound.set_volume(real_volume)
         self.update_audio_layers()
 
     def pridat_floating_text(self, x, y, text, color=(255, 255, 255), life=1.0):
@@ -464,6 +492,9 @@ class Lista():
         })
 
     def update_audio_layers(self):
+        if not pygame.mixer.get_init():
+            return
+            
         active_count = sum([
             1 if self.drummer_active else 0,
             1 if self.guitarist_active else 0,
@@ -634,6 +665,7 @@ class Lista():
         self.guitarist_active = False
         self.pianist_active = False
         self.dj_active = False
+        self.sekuritak_active = False
 
         self.bought_items = {"Členové": set(), "Vylepšení": set(), "Rebirth": set()}
         self.upgrade_levels = {i: 0 for i in range(7)}
@@ -707,6 +739,7 @@ class Lista():
             "guitarist_active": bool(getattr(self, 'guitarist_active', False)),
             "pianist_active": bool(getattr(self, 'pianist_active', False)),
             "dj_active": bool(getattr(self, 'dj_active', False)),
+            "sekuritak_active": bool(getattr(self, 'sekuritak_active', False)),
             "combo_clicks": int(getattr(self, 'combo_clicks', 0)),
             "combo_multiplier": float(getattr(self, 'combo_multiplier', 1.0)),
             "task_income_buff": float(getattr(self, 'task_income_buff', 1.0)),
@@ -736,6 +769,7 @@ class Lista():
         self.guitarist_active = bool(data.get("guitarist_active", getattr(self, 'guitarist_active', False)))
         self.pianist_active = bool(data.get("pianist_active", getattr(self, 'pianist_active', False)))
         self.dj_active = bool(data.get("dj_active", getattr(self, 'dj_active', False)))
+        self.sekuritak_active = bool(data.get("sekuritak_active", getattr(self, 'sekuritak_active', False)))
         self.combo_clicks = int(data.get("combo_clicks", getattr(self, 'combo_clicks', 0)))
         self.combo_multiplier = float(data.get("combo_multiplier", getattr(self, 'combo_multiplier', 1.0)))
         self.task_income_buff = float(data.get("task_income_buff", getattr(self, 'task_income_buff', 1.0)))
@@ -781,7 +815,7 @@ class Lista():
         self.piano_target_scale = 1.3
         if hasattr(self, 'piano_sound') and self.piano_sound:
             self.piano_sound.play()
-        elif self.guitar_sound:
+        elif self.guitar_sound and pygame.mixer.get_init():
             ch = pygame.mixer.find_channel(True)
             if ch:
                 ch.set_volume((self.hlasitost ** 2) * 0.22)
@@ -792,7 +826,7 @@ class Lista():
         self.dj_target_scale = 1.3
         if hasattr(self, 'dj_sound') and self.dj_sound:
             self.dj_sound.play()
-        elif self.drum_sound:
+        elif self.drum_sound and pygame.mixer.get_init():
             ch = pygame.mixer.find_channel(True)
             if ch:
                 ch.set_volume((self.hlasitost ** 2) * 0.18)
@@ -914,6 +948,34 @@ class Lista():
                 self.dj_scale = self.dj_target_scale
                 if abs(self.dj_target_scale - 1.3) < 0.01 and abs(self.dj_scale - 1.3) < 0.01:
                     self.dj_target_scale = 1.0
+                    
+        if getattr(self, 'sekuritak_active', False):
+            import math
+            import random
+            dx = getattr(self, 'sekuritak_cile_x', self.sekuritak_x) - self.sekuritak_x
+            dy = getattr(self, 'sekuritak_cile_y', self.sekuritak_y) - self.sekuritak_y
+            
+            if time.time() < getattr(self, 'sekuritak_fight_time', 0):
+                # Bojuje - tuka rukama (zvetsuje/zmensuje)
+                self.sekuritak_scale = 1.0 + math.sin(time.time() * 25) * 0.2
+            else:
+                dist = math.hypot(dx, dy)
+                if dist > 5:
+                    self.sekuritak_x += (dx / dist) * 2.0
+                    self.sekuritak_y += (dy / dist) * 2.0
+                    self.sekuritak_scale = 1.0 + math.sin(time.time() * 10) * 0.05
+                else:
+                    self.sekuritak_scale = 1.0
+                    if random.random() < 0.01:
+                        self.sekuritak_cile_x = random.randint(50, self.sirka - 50)
+                        self.sekuritak_cile_y = random.randint(self.vyska_okna - 250, self.vyska_okna - 50)
+                    elif random.random() < 0.005:
+                        self.sekuritak_fight_time = time.time() + 1.0
+                        if hasattr(self, 'sekuritak_sound') and self.sekuritak_sound:
+                            ch = pygame.mixer.find_channel(True)
+                            if ch:
+                                ch.set_volume(self.hlasitost ** 2)
+                                ch.play(self.sekuritak_sound)
 
         if abs(self.singer_scale - self.singer_target_scale) > 0.01:
             self.singer_scale += (self.singer_target_scale - self.singer_scale) * self.singer_animation_speed
@@ -1006,6 +1068,20 @@ class Lista():
 
             temp_dj_rect = scaled_dj.get_rect(center=temp_dj_rect.center)
             okno.blit(scaled_dj, temp_dj_rect)
+
+        if self.sekuritak_active:
+            scale = self.sekuritak_scale
+            scaled_w = int(self.sekuritak_image.get_width() * scale)
+            scaled_h = int(self.sekuritak_image.get_height() * scale)
+            scaled_img = pygame.transform.smoothscale(self.sekuritak_image, (scaled_w, scaled_h))
+            rect = scaled_img.get_rect(center=(int(self.sekuritak_x), int(self.sekuritak_y)))
+            okno.blit(scaled_img, rect)
+            
+            if time.time() < self.sekuritak_fight_time:
+                # Kreslit nejaky BAF efekt
+                fight_font = pygame.font.SysFont(None, 40, bold=True)
+                fight_text = fight_font.render("BUM!", True, (255, 50, 50))
+                okno.blit(fight_text, fight_text.get_rect(center=(int(self.sekuritak_x), int(self.sekuritak_y) - 40)))
 
         ui_layer = pygame.Surface((self.sirka, self.vyska_okna), pygame.SRCALPHA)
         self._draw_ui_layer(ui_layer)
