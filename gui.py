@@ -833,6 +833,7 @@ class Lista():
                 ch.play(self.drum_sound)
 
     def update(self): 
+        import random
         self.update_audio_layers()
 
         now = time.time()
