@@ -136,22 +136,23 @@ def vypocitat_vydelky(l):
     levels = getattr(l, 'upgrade_levels', {i: 0 for i in range(7)})
     rebirth_mult = get_rebirth_multiplier(l)
 
-    global_mult = 1.0 + (levels.get(3, 0) * 0.12)
+    # Bass upgrade give +8 $/s flat bonus to all income
+    bass_fixed_bonus = levels.get(3, 0) * 8
     dj_team_mult = (1.10 + levels.get(6, 0) * 0.04) if l.dj_active else 1.0
     task_mult = float(getattr(l, 'task_income_buff', 1.0))
     concert_mult = float(getattr(l, 'concert_buff_mult', 1.0))
-    total_mult = global_mult * dj_team_mult * task_mult * concert_mult
+    total_mult = dj_team_mult * task_mult * concert_mult
 
     # Passive je jen od mikrofonu a DJ aury, ne od kazde postavy zvlast.
     base_passive = (1 if l.mikrofon_active else 0) + (1 if l.dj_active else 0)
 
-    auto_income = int(round(base_passive * total_mult * rebirth_mult))
-    # Role economics: drummer = rychly tick, guitarist = mensi burst,
-    # pianist = stabilne nejsilnejsi DPS, DJ = buff + stredni vlastni tick.
-    drum_tick_income = int(round((1.2 + levels.get(1, 0) * 1.6) * total_mult * rebirth_mult))
-    guitar_burst_income = int(round((2.0 + levels.get(2, 0) * 1.8) * total_mult * rebirth_mult))
-    piano_tick_income = int(round((2.4 + levels.get(5, 0) * 2.2) * total_mult * rebirth_mult))
-    dj_tick_income = int(round((4.0 + levels.get(6, 0) * 2.2) * global_mult * rebirth_mult * concert_mult))
+    auto_income = int(round(base_passive * total_mult * rebirth_mult)) + int(bass_fixed_bonus * rebirth_mult)
+    # Role economics: drummer = +3 $/s per level, guitarist = +5 $/s per level,
+    # pianist = +6 $/s per level, DJ = buff + stredni vlastni tick.
+    drum_tick_income = int(round((1.8 + levels.get(1, 0) * 1.8) * total_mult * rebirth_mult))
+    guitar_burst_income = int(round((20.0 + levels.get(2, 0) * 18.0) * total_mult * rebirth_mult))
+    piano_tick_income = int(round((3.0 + levels.get(5, 0) * 3.0) * total_mult * rebirth_mult))
+    dj_tick_income = int(round((4.0 + levels.get(6, 0) * 2.2) * total_mult * rebirth_mult * concert_mult))
 
     drum_tick_income = max(1, drum_tick_income)
     guitar_burst_income = max(1, guitar_burst_income)
