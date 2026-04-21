@@ -34,8 +34,11 @@ def perform_rebirth(l):
         return False
     if hasattr(l, 'perform_rebirth'):
         l.perform_rebirth()
+        # Zvýšení ceny dalšího rebirthu o 1.8x
+        l.rebirth_requirement = int(getattr(l, 'rebirth_requirement', 1_000_000) * 1.8)
     else:
         l.rebirth_count = int(getattr(l, 'rebirth_count', 0)) + 1
+        l.rebirth_requirement = int(getattr(l, 'rebirth_requirement', 1_000_000) * 1.8)
     return True
 
 
@@ -369,10 +372,10 @@ while running:
                                 price = lista.item_prices.get(lista.aktivni_kategorie, {}).get(i, 0)
 
                                 if lista.aktivni_kategorie == "Rebirth":
-                                    if can_rebirth(lista):
+                                    need = int(getattr(lista, 'rebirth_requirement', 1_000_000))
+                                    if lista.penize >= need:
                                         lista.rebirth_confirm_open = True
                                     elif hasattr(lista, 'pridat_floating_text'):
-                                        need = int(getattr(lista, 'rebirth_requirement', 1_000_000))
                                         msg = txt(lista, "rebirth_from", "Rebirth od {need}$").format(need=need)
                                         lista.pridat_floating_text(25, 130, msg, (255, 190, 190), life=1.2)
                                     continue
@@ -424,6 +427,12 @@ while running:
     lista.update()
     
     current_time = time.time()
+    # Resetuj kombo multiplier na 1.0, pokud vypršl čas
+    if hasattr(lista, 'combo_until') and current_time > lista.combo_until:
+        lista.combo_multiplier = 1.0
+        lista.combo_clicks = 0
+        lista.combo_count = 0
+
     auto_income, drum_tick_income, guitar_burst_income, piano_tick_income, dj_tick_income = vypocitat_vydelky(lista)
     aktualizovat_ukol(lista, "reach_10k_ps", value=int(getattr(lista, 'prijem', 0)))
 
