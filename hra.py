@@ -4,6 +4,10 @@ import sys
 import time
 import random
 
+try:
+    pygame.mixer.init()
+except pygame.error:
+    os.environ['SDL_AUDIODRIVER'] = 'dummy'
 pygame.init()
 
 import gui
@@ -34,8 +38,11 @@ def perform_rebirth(l):
         return False
     if hasattr(l, 'perform_rebirth'):
         l.perform_rebirth()
+        # Zvýšení ceny dalšího rebirthu o 1.8x
+        l.rebirth_requirement = int(getattr(l, 'rebirth_requirement', 1_000_000) * 1.8)
     else:
         l.rebirth_count = int(getattr(l, 'rebirth_count', 0)) + 1
+        l.rebirth_requirement = int(getattr(l, 'rebirth_requirement', 1_000_000) * 1.8)
     return True
 
 
@@ -150,9 +157,9 @@ def vypocitat_vydelky(l):
     # Role economics: drummer = +3 $/s per level, guitarist = +5 $/s per level,
     # pianist = +6 $/s per level, DJ = buff + stredni vlastni tick.
     drum_tick_income = int(round((1.8 + levels.get(1, 0) * 1.8) * total_mult * rebirth_mult))
-    guitar_burst_income = int(round((20.0 + levels.get(2, 0) * 18.0) * total_mult * rebirth_mult))
+    guitar_burst_income = int(round((20.0 + levels.get(2, 0) * 20.0) * total_mult * rebirth_mult))
     piano_tick_income = int(round((3.0 + levels.get(5, 0) * 3.0) * total_mult * rebirth_mult))
-    dj_tick_income = int(round((4.0 + levels.get(6, 0) * 2.2) * total_mult * rebirth_mult * concert_mult))
+    dj_tick_income = int(round((4.0 + levels.get(6, 0) * 2.2) * total_mult * rebirth_mult))
 
     drum_tick_income = max(1, drum_tick_income)
     guitar_burst_income = max(1, guitar_burst_income)
@@ -369,10 +376,10 @@ while running:
                                 price = lista.item_prices.get(lista.aktivni_kategorie, {}).get(i, 0)
 
                                 if lista.aktivni_kategorie == "Rebirth":
-                                    if can_rebirth(lista):
+                                    need = int(getattr(lista, 'rebirth_requirement', 1_000_000))
+                                    if lista.penize >= need:
                                         lista.rebirth_confirm_open = True
                                     elif hasattr(lista, 'pridat_floating_text'):
-                                        need = int(getattr(lista, 'rebirth_requirement', 1_000_000))
                                         msg = txt(lista, "rebirth_from", "Rebirth od {need}$").format(need=need)
                                         lista.pridat_floating_text(25, 130, msg, (255, 190, 190), life=1.2)
                                     continue
@@ -394,6 +401,8 @@ while running:
                                         elif i == 4:
                                             lista.dj_active = True
                                             aktualizovat_ukol(lista, "buy_dj", value=1)
+                                        elif i == 5:
+                                            lista.sekuritak_active = True
                                             
                                     elif lista.aktivni_kategorie == "Vylepšení":
                                         lista.item_prices["Vylepšení"][i] *= 3
@@ -424,6 +433,12 @@ while running:
     lista.update()
     
     current_time = time.time()
+    # Resetuj kombo multiplier na 1.0, pokud vypršl čas
+    if hasattr(lista, 'combo_until') and current_time > lista.combo_until:
+        lista.combo_multiplier = 1.0
+        lista.combo_clicks = 0
+        lista.combo_count = 0
+
     auto_income, drum_tick_income, guitar_burst_income, piano_tick_income, dj_tick_income = vypocitat_vydelky(lista)
     aktualizovat_ukol(lista, "reach_10k_ps", value=int(getattr(lista, 'prijem', 0)))
 

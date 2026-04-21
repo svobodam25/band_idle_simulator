@@ -3,12 +3,13 @@ import time
 import math
 import random
 
-pygame.init()
-pygame.font.init()
 try:
     pygame.mixer.init()
-except Exception as e:
-    print("Zvuk nemohl být inicializován:", e)
+except pygame.error:
+    import os
+    os.environ['SDL_AUDIODRIVER'] = 'dummy'
+pygame.init()
+pygame.font.init()
 
 penize_font = pygame.font.SysFont(None, 60)
 prijem_font = pygame.font.SysFont(None, 36)
@@ -24,6 +25,7 @@ class Lista():
         self.sila_kliku = 1000
         self.kliknuti_historie = []
         self.font = pygame.font.SysFont(None, 60)
+        self.character_scale = 1.0 + (sirka - 800) / 3000.0  # Mírné škálování - max 1.37x
 
         self.rebirth_count = 0
         self.rebirth_requirement = 1_000_000
@@ -48,12 +50,12 @@ class Lista():
         self.aktivni_kategorie = "Členové"
 
         self.menu_items = {
-            "Členové": ["Mikrofon", "Bubeník", "Kytarista", "Pianista", "DJ", "Položka 6", "Položka 7"],
+            "Členové": ["Mikrofon", "Bubeník", "Kytarista", "Pianista", "DJ", "Sekuriťák", "Položka 7"],
             "Vylepšení": ["Zlaté hlasivky (+1 Klik)", "Lepší paličky (+3 $/s)", "Lepší trsátko (+5 $/s)", "Těžké basy (+8 $/s)", "Lepší mikrofon (+5 Klik)", "Lepší klávesy (+6 $/s)", "Lepší mix pult (+8 $/s)"],
             "Rebirth": ["Reset runu, trvale 2x prijem"]
         }
         self.menu_items_en = {
-            "Členové": ["Microphone", "Drummer", "Guitarist", "Pianist", "DJ", "Item 6", "Item 7"],
+            "Členové": ["Microphone", "Drummer", "Guitarist", "Pianist", "DJ", "Security Guard", "Item 7"],
             "Vylepšení": ["Golden Vocal Cords (+1 Click)", "Better Drumsticks (+3 $/s)", "Better Pick (+5 $/s)", "Heavy Bass (+8 $/s)", "Better Microphone (+5 Click)", "Better Keys (+6 $/s)", "Better Mixer (+8 $/s)"],
             "Rebirth": ["Reset run, permanent 2x income"]
         }
@@ -112,6 +114,8 @@ class Lista():
         self.singer_x = sirka // 2
         self.singer_y = 300
         self.singer_image = pygame.image.load("obrazky/docasny_zpevak.png")
+        singer_scaled_size = int(350 * self.character_scale)
+        self.singer_image = pygame.transform.scale(self.singer_image, (singer_scaled_size, singer_scaled_size))
         self.singer_rect = self.singer_image.get_rect(center=(self.singer_x, self.singer_y))
         self.singer_scale = 1.0
         self.singer_target_scale = 1.0
@@ -128,40 +132,68 @@ class Lista():
         self.logo_rect = self.logo_image.get_rect(center=(70, 50))
 
         self.drummer_image = pygame.image.load("obrazky/bubenik.png")
-        self.drummer_image = pygame.transform.scale(self.drummer_image, (200, 200))
+        drummer_scaled = int(200 * self.character_scale)
+        self.drummer_image = pygame.transform.scale(self.drummer_image, (drummer_scaled, drummer_scaled))
         self.drummer_rect = self.drummer_image.get_rect(center=(self.sirka // 4, self.singer_y - 30))
         self.drum_image = pygame.image.load("obrazky/docasne_buben.png")
+<<<<<<< HEAD
         self.drum_image = pygame.transform.smoothscale(self.drum_image, (300, 300))
         self.drum_rect = self.drum_image.get_rect(
             center=(self.drummer_rect.centerx + 30, self.drummer_rect.centery + 35)
         )
+=======
+        drum_scaled = int(60 * self.character_scale)
+        self.drum_image = pygame.transform.scale(self.drum_image, (drum_scaled, drum_scaled))
+        self.drum_rect = self.drum_image.get_rect(center=(self.sirka // 4, self.singer_y + 80))
+>>>>>>> origin/main
         self.drummer_active = False
 
         self.guitarist_image = pygame.image.load("obrazky/kytarista.png")
-        self.guitarist_image = pygame.transform.scale(self.guitarist_image, (200, 200))
+        guitarist_scaled = int(200 * self.character_scale)
+        self.guitarist_image = pygame.transform.scale(self.guitarist_image, (guitarist_scaled, guitarist_scaled))
         self.guitarist_rect = self.guitarist_image.get_rect(center=(self.sirka - (self.sirka // 4), self.singer_y - 30))
         self.guitarist_active = False
 
         self.pianist_image = pygame.image.load("obrazky/pianista.png")
-        self.pianist_image = pygame.transform.scale(self.pianist_image, (200, 200))
+        pianist_scaled = int(200 * self.character_scale)
+        self.pianist_image = pygame.transform.scale(self.pianist_image, (pianist_scaled, pianist_scaled))
         self.pianist_rect = self.pianist_image.get_rect(center=(self.sirka // 6, self.singer_y - 30))
         self.pianist_active = False
 
         self.dj_image = pygame.image.load("obrazky/DJ.png")
-        self.dj_image = pygame.transform.scale(self.dj_image, (200, 200))
+        dj_scaled = int(200 * self.character_scale)
+        self.dj_image = pygame.transform.scale(self.dj_image, (dj_scaled, dj_scaled))
         self.dj_rect = self.dj_image.get_rect(center=(self.sirka - (self.sirka // 6), self.singer_y - 30))
         self.dj_active = False
+        self.sekuritak_active = False
 
         self.mikrofon_active = False
         try:
             self.mikrofon_image = pygame.image.load("obrazky/mikrofon.png")
             mic_w = self.mikrofon_image.get_width()
             mic_h = self.mikrofon_image.get_height()
-            self.mikrofon_image = pygame.transform.smoothscale(self.mikrofon_image, (int(mic_w * 0.5), int(mic_h * 0.5)))
+            mic_scaled_w = int(mic_w * 0.5 * self.character_scale)
+            mic_scaled_h = int(mic_h * 0.5 * self.character_scale)
+            self.mikrofon_image = pygame.transform.smoothscale(self.mikrofon_image, (mic_scaled_w, mic_scaled_h))
         except:
             self.mikrofon_image = pygame.Surface((30, 80), pygame.SRCALPHA)
         self.mikrofon_rect = self.mikrofon_image.get_rect(center=(self.singer_x - 40, self.singer_y + 70))
         
+        try:
+            img = pygame.image.load("obrazky/kotlar.png")
+            w = img.get_width()
+            h = img.get_height()
+            self.sekuritak_image = pygame.transform.smoothscale(img, (int(w * 0.45), int(h * 0.45)))
+        except:
+            self.sekuritak_image = pygame.Surface((80, 80))
+            self.sekuritak_image.fill((200, 0, 0))
+        self.sekuritak_x = 100.0
+        self.sekuritak_y = self.vyska_okna - 100.0
+        self.sekuritak_cile_x = 100.0
+        self.sekuritak_cile_y = self.vyska_okna - 100.0
+        self.sekuritak_scale = 1.0
+        self.sekuritak_fight_time = 0.0
+
         self.hlasitost = 0.5 
 
         self.guitar_scale = 1.0
@@ -203,6 +235,13 @@ class Lista():
         except Exception as e:
             print("Chyba při načítání dj.wav:", e)
             self.dj_sound = None
+
+        try:
+            self.sekuritak_sound = pygame.mixer.Sound("zvuky/kotlar.wav")
+            self.sekuritak_sound.set_volume(self.hlasitost ** 2)
+        except Exception as e:
+            print("Chyba při načítání kotlar.wav:", e)
+            self.sekuritak_sound = None
 
         self.button_text_disabled = self.button_font.render("Koupit", True, (100, 100, 100))
 
@@ -292,6 +331,9 @@ class Lista():
         self.vyska_okna = vyska
         self.menu_max_vyska = vyska
         
+        # Aktualizuj scale faktor pro postavy (fixní základ, mírné škálování)
+        self.character_scale = 0.7 + (sirka / 4000.0)
+        
         self.menu_rect = pygame.Rect(self.sirka - 90, 20, 70, 60)
         
         settings_w = 640
@@ -338,6 +380,15 @@ class Lista():
         self.singer_x = self.sirka // 2
         self.singer_y = (self.vyska_okna // 2) + 100 if self.vyska_okna > 600 else self.vyska_okna // 2
         self.singer_rect = self.singer_image.get_rect(center=(self.singer_x, self.singer_y))
+        
+        # Škáluj zpěváka na základě velikosti okna
+        singer_size = int(280 * self.character_scale)
+        try:
+            singer_original = pygame.image.load("obrazky/docasny_zpevak.png")
+            self.singer_image = pygame.transform.scale(singer_original, (singer_size, singer_size))
+        except:
+            pass
+        self.singer_rect = self.singer_image.get_rect(center=(self.singer_x, self.singer_y))
 
         if self.vyska_okna <= 600:
             drummer_x = int(self.sirka * 0.30)
@@ -355,6 +406,50 @@ class Lista():
             center=(self.drummer_rect.centerx + 30, self.drummer_rect.centery + 35)
         )
 
+        self.guitarist_rect = self.guitarist_image.get_rect(center=(guitarist_x, self.singer_y - 30))
+        self.pianist_rect = self.pianist_image.get_rect(center=(pianist_x, self.singer_y - 30))
+        self.dj_rect = self.dj_image.get_rect(center=(dj_x, self.singer_y - 30))
+        
+        # Škáluj obrázky postav na základě velikosti okna (ale zachovej pozici)
+        drummer_size = int(200 * self.character_scale)
+        guitarist_size = int(200 * self.character_scale)
+        pianist_size = int(200 * self.character_scale)
+        dj_size = int(200 * self.character_scale)
+        drum_size = int(60 * self.character_scale)
+        
+        try:
+            drummer_original = pygame.image.load("obrazky/bubenik.png")
+            self.drummer_image = pygame.transform.scale(drummer_original, (drummer_size, drummer_size))
+        except:
+            pass
+        
+        try:
+            guitarist_original = pygame.image.load("obrazky/kytarista.png")
+            self.guitarist_image = pygame.transform.scale(guitarist_original, (guitarist_size, guitarist_size))
+        except:
+            pass
+        
+        try:
+            pianist_original = pygame.image.load("obrazky/pianista.png")
+            self.pianist_image = pygame.transform.scale(pianist_original, (pianist_size, pianist_size))
+        except:
+            pass
+        
+        try:
+            dj_original = pygame.image.load("obrazky/DJ.png")
+            self.dj_image = pygame.transform.scale(dj_original, (dj_size, dj_size))
+        except:
+            pass
+        
+        try:
+            drum_original = pygame.image.load("obrazky/docasne_buben.png")
+            self.drum_image = pygame.transform.scale(drum_original, (drum_size, drum_size))
+        except:
+            pass
+        
+        # Nastav rect pro škálované obrázky (zachovej pozici)
+        self.drummer_rect = self.drummer_image.get_rect(center=(drummer_x, self.singer_y - 30))
+        self.drum_rect = self.drum_image.get_rect(center=(drummer_x, self.singer_y + 80))
         self.guitarist_rect = self.guitarist_image.get_rect(center=(guitarist_x, self.singer_y - 30))
         self.pianist_rect = self.pianist_image.get_rect(center=(pianist_x, self.singer_y - 30))
         self.dj_rect = self.dj_image.get_rect(center=(dj_x, self.singer_y - 30))
@@ -385,10 +480,14 @@ class Lista():
         
         real_volume = self.hlasitost ** 2
         
+        if not pygame.mixer.get_init():
+            return
+            
         if hasattr(self, 'drum_sound') and self.drum_sound: self.drum_sound.set_volume(real_volume)
         if hasattr(self, 'guitar_sound') and self.guitar_sound: self.guitar_sound.set_volume(real_volume)
         if hasattr(self, 'piano_sound') and self.piano_sound: self.piano_sound.set_volume(real_volume)
         if hasattr(self, 'dj_sound') and self.dj_sound: self.dj_sound.set_volume(real_volume)
+        if hasattr(self, 'sekuritak_sound') and self.sekuritak_sound: self.sekuritak_sound.set_volume(real_volume)
         self.update_audio_layers()
 
     def pridat_floating_text(self, x, y, text, color=(255, 255, 255), life=1.0):
@@ -402,6 +501,9 @@ class Lista():
         })
 
     def update_audio_layers(self):
+        if not pygame.mixer.get_init():
+            return
+            
         active_count = sum([
             1 if self.drummer_active else 0,
             1 if self.guitarist_active else 0,
@@ -572,6 +674,7 @@ class Lista():
         self.guitarist_active = False
         self.pianist_active = False
         self.dj_active = False
+        self.sekuritak_active = False
 
         self.bought_items = {"Členové": set(), "Vylepšení": set(), "Rebirth": set()}
         self.upgrade_levels = {i: 0 for i in range(7)}
@@ -645,6 +748,7 @@ class Lista():
             "guitarist_active": bool(getattr(self, 'guitarist_active', False)),
             "pianist_active": bool(getattr(self, 'pianist_active', False)),
             "dj_active": bool(getattr(self, 'dj_active', False)),
+            "sekuritak_active": bool(getattr(self, 'sekuritak_active', False)),
             "combo_clicks": int(getattr(self, 'combo_clicks', 0)),
             "combo_multiplier": float(getattr(self, 'combo_multiplier', 1.0)),
             "task_income_buff": float(getattr(self, 'task_income_buff', 1.0)),
@@ -674,6 +778,7 @@ class Lista():
         self.guitarist_active = bool(data.get("guitarist_active", getattr(self, 'guitarist_active', False)))
         self.pianist_active = bool(data.get("pianist_active", getattr(self, 'pianist_active', False)))
         self.dj_active = bool(data.get("dj_active", getattr(self, 'dj_active', False)))
+        self.sekuritak_active = bool(data.get("sekuritak_active", getattr(self, 'sekuritak_active', False)))
         self.combo_clicks = int(data.get("combo_clicks", getattr(self, 'combo_clicks', 0)))
         self.combo_multiplier = float(data.get("combo_multiplier", getattr(self, 'combo_multiplier', 1.0)))
         self.task_income_buff = float(data.get("task_income_buff", getattr(self, 'task_income_buff', 1.0)))
@@ -719,7 +824,7 @@ class Lista():
         self.piano_target_scale = 1.3
         if hasattr(self, 'piano_sound') and self.piano_sound:
             self.piano_sound.play()
-        elif self.guitar_sound:
+        elif self.guitar_sound and pygame.mixer.get_init():
             ch = pygame.mixer.find_channel(True)
             if ch:
                 ch.set_volume((self.hlasitost ** 2) * 0.22)
@@ -730,13 +835,14 @@ class Lista():
         self.dj_target_scale = 1.3
         if hasattr(self, 'dj_sound') and self.dj_sound:
             self.dj_sound.play()
-        elif self.drum_sound:
+        elif self.drum_sound and pygame.mixer.get_init():
             ch = pygame.mixer.find_channel(True)
             if ch:
                 ch.set_volume((self.hlasitost ** 2) * 0.18)
                 ch.play(self.drum_sound)
 
     def update(self): 
+        import random
         self.update_audio_layers()
 
         now = time.time()
@@ -852,6 +958,52 @@ class Lista():
                 self.dj_scale = self.dj_target_scale
                 if abs(self.dj_target_scale - 1.3) < 0.01 and abs(self.dj_scale - 1.3) < 0.01:
                     self.dj_target_scale = 1.0
+                    
+        if getattr(self, 'sekuritak_active', False):
+            import math
+            import random
+            
+            if not hasattr(self, 'last_sekuritak_fight'):
+                self.last_sekuritak_fight = time.time()
+                
+            if time.time() - self.last_sekuritak_fight >= 5.0:
+                self.sekuritak_fight_time = time.time() + 1.0
+                self.last_sekuritak_fight = time.time()
+                self.penize += 100
+                
+                # Zkusime zavolat pridat_penize z hrace, pokud ale neni dostupna mame self.penize
+                # Plus nejake statistiky jestli chceme. Zde ale to floatuje na obrazovku.
+                if hasattr(self, 'pridat_floating_text'):
+                    self.pridat_floating_text(
+                        self.sekuritak_x + 40, 
+                        self.sekuritak_y - 20, 
+                        "+100$", 
+                        (255, 0, 0), 
+                        life=1.0
+                    )
+                if hasattr(self, 'sekuritak_sound') and self.sekuritak_sound:
+                    ch = pygame.mixer.find_channel(True)
+                    if ch:
+                        ch.set_volume(self.hlasitost ** 2)
+                        ch.play(self.sekuritak_sound)
+                        
+            dx = getattr(self, 'sekuritak_cile_x', self.sekuritak_x) - self.sekuritak_x
+            dy = getattr(self, 'sekuritak_cile_y', self.sekuritak_y) - self.sekuritak_y
+            
+            if time.time() < getattr(self, 'sekuritak_fight_time', 0):
+                # Bojuje - tuka rukama (zvetsuje/zmensuje)
+                self.sekuritak_scale = 1.0 + math.sin(time.time() * 25) * 0.2
+            else:
+                dist = math.hypot(dx, dy)
+                if dist > 5:
+                    self.sekuritak_x += (dx / dist) * 2.0
+                    self.sekuritak_y += (dy / dist) * 2.0
+                    self.sekuritak_scale = 1.0 + math.sin(time.time() * 10) * 0.05
+                else:
+                    self.sekuritak_scale = 1.0
+                    if random.random() < 0.01:
+                        self.sekuritak_cile_x = random.randint(50, self.sirka - 50)
+                        self.sekuritak_cile_y = random.randint(self.vyska_okna - 250, self.vyska_okna - 50)
 
         if abs(self.singer_scale - self.singer_target_scale) > 0.01:
             self.singer_scale += (self.singer_target_scale - self.singer_scale) * self.singer_animation_speed
@@ -949,6 +1101,20 @@ class Lista():
 
             temp_dj_rect = scaled_dj.get_rect(center=temp_dj_rect.center)
             okno.blit(scaled_dj, temp_dj_rect)
+
+        if self.sekuritak_active:
+            scale = self.sekuritak_scale
+            scaled_w = int(self.sekuritak_image.get_width() * scale)
+            scaled_h = int(self.sekuritak_image.get_height() * scale)
+            scaled_img = pygame.transform.smoothscale(self.sekuritak_image, (scaled_w, scaled_h))
+            rect = scaled_img.get_rect(center=(int(self.sekuritak_x), int(self.sekuritak_y)))
+            okno.blit(scaled_img, rect)
+            
+            if time.time() < self.sekuritak_fight_time:
+                # Kreslit nejaky BAF efekt
+                fight_font = pygame.font.SysFont(None, 40, bold=True)
+                fight_text = fight_font.render("BUM!", True, (255, 50, 50))
+                okno.blit(fight_text, fight_text.get_rect(center=(int(self.sekuritak_x), int(self.sekuritak_y) - 40)))
 
         ui_layer = pygame.Surface((self.sirka, self.vyska_okna), pygame.SRCALPHA)
         self._draw_ui_layer(ui_layer)
@@ -1368,9 +1534,6 @@ class Lista():
     def _draw_scrollbar(self, okno):
         """Draw scrollbar on the right side of the menu"""
         if self.menu_vyska <= 0:
-            return
-        
-        if self.menu_vyska < self.menu_max_vyska * 0.999:
             return
         
         aktualni = self.menu_items[self.aktivni_kategorie]
