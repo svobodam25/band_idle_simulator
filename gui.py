@@ -192,6 +192,7 @@ class Lista():
         self.sekuritak_cile_y = self.vyska_okna - 100.0
         self.sekuritak_scale = 1.0
         self.sekuritak_fight_time = 0.0
+        self.kotlar_volume_boost = 2.8
 
         self.hlasitost = 0.5 
 
@@ -228,16 +229,17 @@ class Lista():
         self.dj_scale = 1.0
         self.dj_target_scale = 1.0
         self.dj_animation_speed = 0.25
+        self.dj_volume_multiplier = 0.5
         try:
             self.dj_sound = pygame.mixer.Sound("zvuky/dj.wav")
-            self.dj_sound.set_volume(self.hlasitost ** 2)
+            self.dj_sound.set_volume((self.hlasitost ** 2) * self.dj_volume_multiplier)
         except Exception as e:
             print("Chyba při načítání dj.wav:", e)
             self.dj_sound = None
 
         try:
             self.sekuritak_sound = pygame.mixer.Sound("zvuky/kotlar.wav")
-            self.sekuritak_sound.set_volume(self.hlasitost ** 2)
+            self.sekuritak_sound.set_volume(min(1.0, (self.hlasitost ** 2) * self.kotlar_volume_boost))
         except Exception as e:
             print("Chyba při načítání kotlar.wav:", e)
             self.sekuritak_sound = None
@@ -487,8 +489,8 @@ class Lista():
         if hasattr(self, 'drum_sound') and self.drum_sound: self.drum_sound.set_volume(real_volume)
         if hasattr(self, 'guitar_sound') and self.guitar_sound: self.guitar_sound.set_volume(real_volume)
         if hasattr(self, 'piano_sound') and self.piano_sound: self.piano_sound.set_volume(real_volume)
-        if hasattr(self, 'dj_sound') and self.dj_sound: self.dj_sound.set_volume(real_volume)
-        if hasattr(self, 'sekuritak_sound') and self.sekuritak_sound: self.sekuritak_sound.set_volume(real_volume)
+        if hasattr(self, 'dj_sound') and self.dj_sound: self.dj_sound.set_volume(real_volume * self.dj_volume_multiplier)
+        if hasattr(self, 'sekuritak_sound') and self.sekuritak_sound: self.sekuritak_sound.set_volume(min(1.0, real_volume * self.kotlar_volume_boost))
         self.update_audio_layers()
 
     def pridat_floating_text(self, x, y, text, color=(255, 255, 255), life=1.0):
@@ -985,18 +987,36 @@ class Lista():
                 if hasattr(self, 'sekuritak_sound') and self.sekuritak_sound:
                     ch = pygame.mixer.find_channel(True)
                     if ch:
-                        ch.set_volume(self.hlasitost ** 2)
+                        ch.set_volume(min(1.0, (self.hlasitost ** 2) * self.kotlar_volume_boost))
                         ch.play(self.sekuritak_sound)
                         
-            pad = 100
-            y_min = int(self.vyska_okna * 0.65)
-            y_max = self.vyska_okna - 50
+            # Sekuritak se pohybuje jen v okoli docasneho publika (skalovane dle rozliseni).
+            je_full_hd = self.vyska_okna > 600
+            audience_center_x = self.sirka / 2.0
+            audience_center_y = self.vyska_okna - (260 if je_full_hd else 140)
+            if self.concert_active is not None:
+                audience_center_x = float(self.concert_active.get("x", audience_center_x))
+                audience_center_y = float(self.concert_active.get("y", audience_center_y))
+
+            orbit_x = int(self.sirka * (0.24 if je_full_hd else 0.18))
+            orbit_y = int(self.vyska_okna * (0.16 if je_full_hd else 0.12))
+            pad = 80
+
+            x_min = max(pad, int(audience_center_x - orbit_x))
+            x_max = min(self.sirka - pad, int(audience_center_x + orbit_x))
+            y_min = max(int(self.vyska_okna * 0.42), int(audience_center_y - orbit_y))
+            y_max = min(self.vyska_okna - 50, int(audience_center_y + orbit_y))
+
+            if x_min >= x_max:
+                x_min, x_max = pad, max(pad + 1, self.sirka - pad)
+            if y_min >= y_max:
+                y_min, y_max = int(self.vyska_okna * 0.45), max(int(self.vyska_okna * 0.45) + 1, self.vyska_okna - 50)
             
             # Bezpecnostni uprava pro stare ulozene pozice i soucasnou pozici
-            self.sekuritak_cile_x = max(pad, min(getattr(self, 'sekuritak_cile_x', self.sekuritak_x), self.sirka - pad))
+            self.sekuritak_cile_x = max(x_min, min(getattr(self, 'sekuritak_cile_x', self.sekuritak_x), x_max))
             self.sekuritak_cile_y = max(y_min, min(getattr(self, 'sekuritak_cile_y', self.sekuritak_y), y_max))
             
-            self.sekuritak_x = max(pad, min(self.sekuritak_x, self.sirka - pad))
+            self.sekuritak_x = max(x_min, min(self.sekuritak_x, x_max))
             self.sekuritak_y = max(y_min, min(self.sekuritak_y, y_max))
             
             dx = self.sekuritak_cile_x - self.sekuritak_x
@@ -1013,23 +1033,20 @@ class Lista():
                     speed_mult *= 2.0
                 
                 if dist > 5:
-
-                    self.sekuritak_x += (dx / dist) * (2.0 * max(1.0, self.vyska_okna / 600.0))
-                    self.sekuritak_y += (dy / dist) * (2.0 * max(1.0, self.vyska_okna / 600.0))
+                    step = speed_mult * max(1.0, self.vyska_okna / 600.0)
+                    self.sekuritak_x += (dx / dist) * step
+                    self.sekuritak_y += (dy / dist) * step
 
                     self.sekuritak_scale = 1.0 + math.sin(time.time() * 10) * 0.05
                 else:
                     # Dosal cile -> vyber novy nahodny cil, aby se neustale zastavoval
-                    self.sekuritak_cile_x = random.randint(50, self.sirka - 50)
-                    self.sekuritak_cile_y = random.randint(self.vyska_okna // 2, self.vyska_okna - 50)
+                    self.sekuritak_cile_x = random.randint(x_min, max(x_min, x_max))
+                    self.sekuritak_cile_y = random.randint(min(y_min, y_max), max(y_min, y_max))
                     self.sekuritak_scale = 1.0
                     self.sekuritak_scale = 1.0
                     # Zhruba 1 % šance na start cesty na snímek (když dorazí do cíle, chvíli si tam postojí)
                     if random.random() < 0.01:
-                        pad = 100
-                        y_min = int(self.vyska_okna * 0.65)
-                        y_max = self.vyska_okna - 50
-                        self.sekuritak_cile_x = random.randint(pad, max(pad, self.sirka - pad))
+                        self.sekuritak_cile_x = random.randint(x_min, max(x_min, x_max))
                         self.sekuritak_cile_y = random.randint(min(y_min, y_max), max(y_min, y_max))
 
         if abs(self.singer_scale - self.singer_target_scale) > 0.01:
